@@ -1,0 +1,124 @@
+.llm-service-selector {
+  background-color: white;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  margin-top: 16px;
+  box-shadow: var(--shadow);
+}
+
+.selector-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.selector-header h3 {
+  font-size: 16px;
+  color: var(--dark-color);
+}
+
+.toggle-btn {
+  background: none;
+  font-size: 18px;
+  padding: 4px 8px;
+  color: var(--secondary-color);
+}
+
+.service-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 16px 16px;
+}
+
+.service-option {
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.service-option.selected {
+  border-color: var(--primary-color);
+  background-color: rgba(74, 108, 247, 0.05);
+}
+
+.service-option:hover:not(.disabled) {
+  border-color: var(--primary-color);
+}
+
+.service-option.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.service-label {
+  display: flex;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.service-label input {
+  margin-right: 8px;
+}
+
+.service-label span {
+  font-weight: 500;
+}
+
+.service-description {
+  font-size: 13px;
+  color: var(--secondary-color);
+  margin-left: 22px;
+  line-height: 1.4;
+}
+
+.service-locked-message {
+  background-color: rgba(255, 193, 7, 0.1);
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: #856404;
+  line-height: 1.4;
+}
+
+.service-forking-message {
+  background-color: rgba(0, 123, 255, 0.1);
+  border: 1px solid rgba(0, 123, 255, 0.3);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: #004085;
+  line-height: 1.4;
+}
+
+.llm-service-selector.forking {
+  border: 2px solid #2196f3;
+  box-shadow: 0 0 8px rgba(33, 150, 243, 0.3);
+}
+
+.forking-indicator, .locked-indicator {
+  display: inline-block;
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 8px;
+  font-weight: normal;
+}
+
+.forking-indicator {
+  background-color: #2196f3;
+  color: white;
+}
+
+.locked-indicator {
+  background-color: #ffc107;
+  color: #856404;
+} 

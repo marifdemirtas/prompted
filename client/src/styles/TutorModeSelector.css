@@ -1,0 +1,78 @@
+.tutor-mode-selector {
+  background-color: white;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  margin-top: 16px;
+  box-shadow: var(--shadow);
+}
+
+.selector-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.selector-header h3 {
+  font-size: 16px;
+  color: var(--dark-color);
+}
+
+.toggle-btn {
+  background: none;
+  font-size: 18px;
+  padding: 4px 8px;
+  color: var(--secondary-color);
+}
+
+.mode-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 16px 16px;
+}
+
+.mode-option {
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.mode-option.selected {
+  border-color: var(--primary-color);
+  background-color: rgba(74, 108, 247, 0.05);
+}
+
+.mode-option:hover:not(.disabled) {
+  border-color: var(--primary-color);
+}
+
+.mode-option.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.mode-label {
+  display: flex;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.mode-label input {
+  margin-right: 8px;
+}
+
+.mode-label span {
+  font-weight: 500;
+}
+
+.mode-description {
+  font-size: 13px;
+  color: var(--secondary-color);
+  margin-left: 22px;
+  line-height: 1.4;
+} 
