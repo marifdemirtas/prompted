@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import ChatInterface from '../components/ChatInterface';
-import LLMServiceSelector from '../components/LLMServiceSelector';
 import api from '../services/api';
 import '../styles/ReplayPage.css';
 
@@ -12,11 +11,26 @@ const ReplayPage = () => {
   const [conversation, setConversation] = useState(null);
   const [messages, setMessages] = useState([]);
   const [title, setTitle] = useState('');
-  const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [loading, setLoading] = useState(true);
   const [llmService, setLLMService] = useState('gemini-dialogue');
   const [error, setError] = useState(null);
   const [editingMessageIndex, setEditingMessageIndex] = useState(null);
+  const [isLLMDropdownOpen, setIsLLMDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+  
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsLLMDropdownOpen(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [dropdownRef]);
   
   // Load conversation data
   useEffect(() => {
@@ -48,23 +62,6 @@ const ReplayPage = () => {
     fetchConversation();
   }, [conversationId]);
   
-  const handleTitleChange = async () => {
-    if (!title.trim()) {
-      setTitle(conversation.title);
-      setIsEditingTitle(false);
-      return;
-    }
-    
-    try {
-      await api.updateConversation(conversationId, { title });
-      // Update the conversation object with the new title
-      setConversation({ ...conversation, title });
-      setIsEditingTitle(false);
-    } catch (err) {
-      console.error('Error updating title:', err);
-    }
-  };
-  
   const resetView = () => {
     setEditingMessageIndex(null);
   };
@@ -75,6 +72,7 @@ const ReplayPage = () => {
   
   const handleLLMServiceChange = async (service) => {
     setLLMService(service);
+    setIsLLMDropdownOpen(false);
     
     try {
       // Update only the llmService field without referencing the conversation's metadata object
@@ -165,6 +163,28 @@ const ReplayPage = () => {
       setEditingMessageIndex(null);
     }
   };
+
+  const llmServices = [
+    {
+      id: 'gemini-direct',
+      label: 'Gemini Direct'
+    },
+    {
+      id: 'gemini-explanation',
+      label: 'Gemini Explanation'
+    },
+    {
+      id: 'gemini-dialogue',
+      label: 'Gemini Dialogue'
+    },
+    {
+      id: 'gemini-scaffolding',
+      label: 'Gemini Scaffolding'
+    },
+  ];
+  
+  // Find the current service label
+  const currentService = llmServices.find(service => service.id === llmService) || { label: 'LLM Service' };
   
   if (loading && !conversation) {
     return <div className="loading">Loading conversation...</div>;
@@ -183,36 +203,29 @@ const ReplayPage = () => {
   
   return (
     <div className="replay-page">
-      <div className="replay-header">
-        <div className="title-container">
-          {isEditingTitle ? (
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              onBlur={handleTitleChange}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  handleTitleChange();
-                }
-              }}
-              autoFocus
-              className="title-input"
-            />
-          ) : (
-            <h2 
-              className="conversation-title" 
-              onClick={() => setIsEditingTitle(true)}
-            >
-              {title}
-            </h2>
+      <div className="top-bar">
+        <div className="llm-service-dropdown" ref={dropdownRef}>
+          <button 
+            className="llm-service-btn" 
+            onClick={() => setIsLLMDropdownOpen(!isLLMDropdownOpen)}
+          >
+            {currentService.label} <span className="plus-icon">+</span>
+          </button>
+          
+          {isLLMDropdownOpen && (
+            <div className="llm-dropdown-menu">
+              {llmServices.map(service => (
+                <div 
+                  key={service.id}
+                  className={`llm-dropdown-item ${service.id === llmService ? 'selected' : ''}`}
+                  onClick={() => handleLLMServiceChange(service.id)}
+                >
+                  {service.label}
+                </div>
+              ))}
+            </div>
           )}
         </div>
-        
-        <LLMServiceSelector 
-          selectedService={llmService} 
-          onServiceChange={handleLLMServiceChange}
-        />
       </div>
       
       <div className="replay-container">

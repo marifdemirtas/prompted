@@ -1,43 +1,90 @@
 .chat-page {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - var(--header-height));
+  height: 100vh;
+  overflow: hidden;
+}
+
+.top-bar {
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  background-color: var(--darker-color);
+  border-bottom: 1px solid var(--border-color);
+  height: 50px;
+}
+
+.top-bar .title {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.llm-service-btn {
+  background-color: #444654;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 8px 12px;
+  color: var(--light-color);
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  min-width: 150px;
+  gap: 6px;
+  margin-left: 8px;
+}
+
+.llm-service-btn:hover {
+  background-color: #40414F;
+}
+
+.plus-icon {
+  font-weight: bold;
+  margin-left: auto;
 }
 
 .chat-header {
-  background-color: #f8f9fa;
-  padding: 15px 20px;
-  border-bottom: 1px solid var(--border-color);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 12px 16px;
+  background-color: var(--darker-color);
+  border-bottom: 1px solid var(--border-color);
+  height: 60px;
 }
 
 .title-container {
   flex: 1;
-  margin-right: 20px;
 }
 
 .conversation-title {
-  font-size: 1.5rem;
-  margin: 0;
+  font-size: 18px;
+  font-weight: 500;
   cursor: pointer;
+  margin: 0;
+  max-width: 80%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .title-input {
-  width: 100%;
-  padding: 8px 12px;
-  border: 1px solid var(--primary-color);
+  font-size: 18px;
+  font-weight: 500;
+  background-color: var(--dark-color);
+  color: var(--light-color);
+  border: 1px solid var(--border-color);
   border-radius: 4px;
-  font-size: 16px;
+  padding: 6px 12px;
+  width: 100%;
+  max-width: 80%;
 }
 
 .chat-container {
   flex: 1;
   display: flex;
   flex-direction: column;
-  position: relative;
   overflow: hidden;
+  height: calc(100vh - 50px);
 }
 
 .new-chat-btn {
@@ -126,11 +173,53 @@
 @media (max-width: 768px) {
   .chat-header {
     flex-direction: column;
-    align-items: stretch;
+    align-items: flex-start;
+    height: auto;
+    padding: 12px;
   }
   
   .title-container {
-    margin-right: 0;
-    margin-bottom: 10px;
+    width: 100%;
+    margin-bottom: 12px;
   }
+  
+  .conversation-title, 
+  .title-input {
+    max-width: 100%;
+  }
+}
+
+.llm-service-dropdown {
+  position: relative;
+}
+
+.llm-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  min-width: 200px;
+  background-color: #343541;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  margin-top: 4px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.llm-dropdown-item {
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  font-size: 14px;
+  color: var(--light-color);
+}
+
+.llm-dropdown-item:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.llm-dropdown-item.selected {
+  background-color: var(--student-bg);
 } 

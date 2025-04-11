@@ -6,22 +6,24 @@
 }
 
 :root {
-  --primary-color: #4a6cf7;
-  --primary-dark: #364fc7;
+  --primary-color: #10a37f;
+  --primary-dark: #0e8a6c;
   --secondary-color: #6c757d;
-  --dark-color: #343a40;
-  --light-color: #f8f9fa;
+  --dark-color: #202123;
+  --darker-color: #343541;
+  --light-color: #ececf1;
+  --text-color: #d1d5db;
   --success-color: #28a745;
   --danger-color: #dc3545;
   --warning-color: #ffc107;
   --info-color: #17a2b8;
-  --student-bg: #e6f7ff;
-  --assistant-bg: #f0f0f0;
-  --border-color: #dee2e6;
-  --background-color: #ffffff;
-  --sidebar-width: 300px;
+  --student-bg: #343541;
+  --assistant-bg: #444654;
+  --border-color: rgba(255, 255, 255, 0.1);
+  --background-color: #343541;
+  --sidebar-width: 260px;
   --header-height: 60px;
-  --shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  --shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
   --transition: all 0.3s ease;
 }
 
@@ -32,20 +34,40 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: var(--background-color);
-  color: var(--dark-color);
+  color: var(--light-color);
   line-height: 1.6;
+}
+
+/* Custom scrollbar for dark theme */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
 }
 
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
-  background-color: #f5f5f5;
+  background-color: #2d2d2d;
   padding: 2px 4px;
   border-radius: 4px;
+  color: #e0e0e0;
 }
 
 a {
-  color: var(--primary-color);
+  color: var(--light-color);
   text-decoration: none;
 }
 
@@ -62,6 +84,12 @@ button {
   font-size: 14px;
   font-weight: 500;
   transition: var(--transition);
+  background-color: var(--primary-color);
+  color: white;
+}
+
+button:hover {
+  background-color: var(--primary-dark);
 }
 
 button:disabled {
@@ -76,11 +104,13 @@ input, textarea {
   font-size: 14px;
   outline: none;
   transition: var(--transition);
+  background-color: var(--dark-color);
+  color: var(--light-color);
 }
 
 input:focus, textarea:focus {
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px rgba(74, 108, 247, 0.2);
+  box-shadow: 0 0 0 2px rgba(16, 163, 127, 0.2);
 }
 
 .container {
@@ -96,6 +126,7 @@ input:focus, textarea:focus {
   justify-content: center;
   height: 200px;
   width: 100%;
+  color: var(--text-color);
 }
 
 .error {

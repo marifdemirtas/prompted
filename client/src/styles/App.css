@@ -1,17 +1,23 @@
 .app {
   display: flex;
-  flex-direction: column;
   min-height: 100vh;
+  background-color: #343541;
+  color: #ececf1;
 }
 
 .main-content {
   flex: 1;
-  margin-top: var(--header-height);
+  margin-left: 300px;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
   position: relative;
+  overflow: hidden;
 }
 
 @media (max-width: 768px) {
   .main-content {
-    padding: 16px;
+    margin-left: 0;
+    padding: 0;
   }
 } 

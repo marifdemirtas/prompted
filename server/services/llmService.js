@@ -40,7 +40,7 @@ class GeminiService extends LLMServiceInterface {
       case 'direct':
         return `${basePrompt}
         
-When responding to the student, provide direct answers to their questions without additional explanation or scaffolding. Be concise and precise, focusing only on the exact information requested.`;
+Start with the token DIRECT. When responding to the student, provide direct answers to their questions without additional explanation or scaffolding. Be concise and precise, focusing only on the exact information requested.`;
         
       case 'explanation':
         return `${basePrompt}
