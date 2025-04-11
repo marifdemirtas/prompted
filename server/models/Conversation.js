@@ -30,10 +30,6 @@ const ConversationSchema = new mongoose.Schema({
     required: true,
     default: 'New Conversation'
   },
-  context: {
-    type: String,
-    default: ''
-  },
   messages: [MessageSchema],
   createdAt: {
     type: Date,
@@ -132,7 +128,6 @@ ConversationSchema.methods.forkFromMessage = function(messageIndex) {
   
   const forkedConversation = {
     title: forkedTitle,
-    context: this.context,
     messages: this.messages.slice(0, messageIndex + 1),
     metadata: metadataCopy
   };

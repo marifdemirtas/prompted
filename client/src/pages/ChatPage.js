@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import ContextEditor from '../components/ContextEditor';
 import ChatInterface from '../components/ChatInterface';
 import LLMServiceSelector from '../components/LLMServiceSelector';
 import api from '../services/api';
 import '../styles/ChatPage.css';
 
 const ChatPage = () => {
-  const [context, setContext] = useState('');
   const [messages, setMessages] = useState([]);
   const [conversationId, setConversationId] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -36,7 +34,6 @@ const ChatPage = () => {
         .then(response => {
           setConversationId(lastConversationId);
           setMessages(response.data.messages);
-          setContext(response.data.context);
           // Handle backward compatibility with old tutor mode format
           if (response.data.metadata.tutorMode) {
             setLLMService(`gemini-${response.data.metadata.tutorMode}`);
@@ -64,7 +61,6 @@ const ChatPage = () => {
       const response = await api.sendMessage({
         conversationId: conversationId, // This will be null for new conversations
         message,
-        context,
         serviceId: llmService
       });
       
@@ -83,16 +79,6 @@ const ChatPage = () => {
       alert('Failed to send message. Please try again.');
     } finally {
       setLoading(false);
-    }
-  };
-  
-  const handleContextChange = (newContext) => {
-    setContext(newContext);
-    
-    // Update the context in the database if we have a conversation
-    if (conversationId) {
-      api.updateConversation(conversationId, { context: newContext })
-        .catch(error => console.error('Error updating context:', error));
     }
   };
   
@@ -140,80 +126,43 @@ const ChatPage = () => {
   
   return (
     <div className="chat-page">
-      <div className="sidebar">
-        <button 
-          className="new-chat-btn" 
-          onClick={handleNewChat}
-          disabled={messages.length === 0}
-        >
-          New Chat
-        </button>
-        
-        <div className="title-section">
-          <div className="conversation-title-container">
-            {isEditingTitle ? (
-              <div className="title-edit-form">
-                <input
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  onBlur={handleTitleChange}
-                  autoFocus
-                  className="title-input"
-                  placeholder="Enter conversation title"
-                />
-                <div className="title-actions">
-                  <button 
-                    className="save-btn" 
-                    onClick={handleTitleChange}
-                  >
-                    Save
-                  </button>
-                  <button 
-                    className="cancel-btn" 
-                    onClick={() => {
-                      setIsEditingTitle(false);
-                      setTitle(title || 'New Conversation');
-                    }}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="conversation-title">
-                <h3>{title}</h3>
-                <button 
-                  className="edit-title-btn" 
-                  onClick={() => setIsEditingTitle(true)}
-                  aria-label="Edit title"
-                >
-                  ✏️
-                </button>
-              </div>
-            )}
-          </div>
+      <div className="chat-header">
+        <div className="title-container">
+          {isEditingTitle ? (
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              onBlur={handleTitleChange}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleTitleChange();
+                }
+              }}
+              autoFocus
+              className="title-input"
+            />
+          ) : (
+            <h2 
+              className="conversation-title" 
+              onClick={() => setIsEditingTitle(true)}
+            >
+              {title}
+            </h2>
+          )}
         </div>
-        
-        <ContextEditor 
-          context={context} 
-          onContextChange={handleContextChange} 
-        />
         
         <LLMServiceSelector 
           selectedService={llmService} 
-          onSelectService={handleLLMServiceChange} 
-          conversationId={conversationId}
-          isForking={false}
+          onServiceChange={handleLLMServiceChange}
         />
       </div>
       
       <div className="chat-container">
-        <ChatInterface 
-          messages={messages} 
+        <ChatInterface
+          messages={messages}
           onSendMessage={handleSendMessage}
-          loading={loading}
-          readOnly={false}
+          isLoading={loading}
         />
       </div>
     </div>

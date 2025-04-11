@@ -6,7 +6,7 @@ const Conversation = require('../models/Conversation');
 // Process a message and get LLM response
 router.post('/chat', async (req, res) => {
   try {
-    const { conversationId, message, context, tutorMode, serviceId } = req.body;
+    const { conversationId, message, tutorMode, serviceId } = req.body;
     
     if (!message) {
       return res.status(400).json({ message: 'Message content is required' });
@@ -76,7 +76,6 @@ router.post('/chat', async (req, res) => {
       // Create a new conversation
       conversation = new Conversation({
         title: title,
-        context: context || '',
         messages: [],
         metadata: {
           // For backward compatibility, store both tutorMode and llmService
@@ -100,7 +99,6 @@ router.post('/chat', async (req, res) => {
         role: msg.role,
         content: msg.content
       })),
-      context: conversation.context,
       // Use conversation's stored service
       serviceId: conversation.metadata.llmService
     };
@@ -185,7 +183,6 @@ router.post('/continue', async (req, res) => {
         role: msg.role,
         content: msg.content
       })),
-      context: conversation.context,
       serviceId: selectedServiceId
     };
     
@@ -271,7 +268,6 @@ router.post('/edit', async (req, res) => {
           role: msg.role,
           content: msg.content
         })),
-        context: conversation.context,
         serviceId: selectedServiceId
       };
       

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import ContextEditor from '../components/ContextEditor';
 import ChatInterface from '../components/ChatInterface';
 import LLMServiceSelector from '../components/LLMServiceSelector';
 import api from '../services/api';
@@ -12,13 +11,12 @@ const ReplayPage = () => {
   
   const [conversation, setConversation] = useState(null);
   const [messages, setMessages] = useState([]);
-  const [context, setContext] = useState('');
-  const [llmService, setLLMService] = useState('gemini-dialogue');
+  const [title, setTitle] = useState('');
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [llmService, setLLMService] = useState('gemini-dialogue');
   const [error, setError] = useState(null);
   const [editingMessageIndex, setEditingMessageIndex] = useState(null);
-  const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const [title, setTitle] = useState('');
   
   // Load conversation data
   useEffect(() => {
@@ -28,8 +26,8 @@ const ReplayPage = () => {
         const response = await api.getConversation(conversationId);
         
         setConversation(response.data);
-        setMessages(response.data.messages);
-        setContext(response.data.context || '');
+        setMessages(response.data.messages || []);
+        setTitle(response.data.title || 'Conversation');
         
         // Handle backward compatibility with old tutor mode format
         if (response.data.metadata?.tutorMode) {
@@ -38,7 +36,6 @@ const ReplayPage = () => {
           setLLMService(response.data.metadata.llmService);
         }
         
-        setTitle(response.data.title || 'New Conversation');
         setError(null);
       } catch (err) {
         console.error('Error fetching conversation:', err);
@@ -50,40 +47,6 @@ const ReplayPage = () => {
     
     fetchConversation();
   }, [conversationId]);
-  
-  const handleContextChange = async (newContext) => {
-    setContext(newContext);
-    
-    try {
-      await api.updateConversation(conversationId, { context: newContext });
-    } catch (err) {
-      console.error('Error updating context:', err);
-    }
-  };
-  
-  const handleLLMServiceChange = async (service) => {
-    setLLMService(service);
-    
-    try {
-      // Update only the llmService field without referencing the conversation's metadata object
-      await api.updateConversation(conversationId, {
-        metadata: { llmService: service }
-      });
-      
-      // Update local state to reflect the change
-      if (conversation) {
-        setConversation({
-          ...conversation,
-          metadata: {
-            ...conversation.metadata,
-            llmService: service
-          }
-        });
-      }
-    } catch (err) {
-      console.error('Error updating LLM service:', err);
-    }
-  };
   
   const handleTitleChange = async () => {
     if (!title.trim()) {
@@ -108,6 +71,30 @@ const ReplayPage = () => {
   
   const handleStartEditing = (messageIndex) => {
     setEditingMessageIndex(messageIndex);
+  };
+  
+  const handleLLMServiceChange = async (service) => {
+    setLLMService(service);
+    
+    try {
+      // Update only the llmService field without referencing the conversation's metadata object
+      await api.updateConversation(conversationId, {
+        metadata: { llmService: service }
+      });
+      
+      // Update local state to reflect the change
+      if (conversation) {
+        setConversation({
+          ...conversation,
+          metadata: {
+            ...conversation.metadata,
+            llmService: service
+          }
+        });
+      }
+    } catch (err) {
+      console.error('Error updating LLM service:', err);
+    }
   };
   
   const handleSendMessage = async (message) => {
@@ -162,7 +149,6 @@ const ReplayPage = () => {
         response = await api.sendMessage({
           conversationId,
           message,
-          context,
           serviceId: llmService
         });
         
@@ -197,87 +183,51 @@ const ReplayPage = () => {
   
   return (
     <div className="replay-page">
-      <div className="sidebar">
-        <div className="replay-controls">
-          <div className="conversation-title-container">
-            {isEditingTitle ? (
-              <div className="title-edit-form">
-                <input
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  onBlur={handleTitleChange}
-                  autoFocus
-                  className="title-input"
-                />
-                <div className="title-actions">
-                  <button 
-                    className="save-btn" 
-                    onClick={handleTitleChange}
-                  >
-                    Save
-                  </button>
-                  <button 
-                    className="cancel-btn" 
-                    onClick={() => {
-                      setIsEditingTitle(false);
-                      setTitle(conversation.title);
-                    }}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="conversation-title">
-                <h3>{title}</h3>
-                <button 
-                  className="edit-title-btn" 
-                  onClick={() => setIsEditingTitle(true)}
-                  aria-label="Edit title"
-                >
-                  ✏️
-                </button>
-              </div>
-            )}
-          </div>
-          
-          <button 
-            className="back-btn" 
-            onClick={() => navigate('/conversations')}
-          >
-            Back to Conversations
-          </button>
+      <div className="replay-header">
+        <div className="title-container">
+          {isEditingTitle ? (
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              onBlur={handleTitleChange}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleTitleChange();
+                }
+              }}
+              autoFocus
+              className="title-input"
+            />
+          ) : (
+            <h2 
+              className="conversation-title" 
+              onClick={() => setIsEditingTitle(true)}
+            >
+              {title}
+            </h2>
+          )}
         </div>
-        
-        <ContextEditor 
-          context={context} 
-          onContextChange={handleContextChange}
-        />
         
         <LLMServiceSelector 
           selectedService={llmService} 
-          onSelectService={handleLLMServiceChange}
-          conversationId={conversationId}
-          isForking={editingMessageIndex !== null}
+          onServiceChange={handleLLMServiceChange}
         />
       </div>
       
-      <div className="chat-container">
-        {editingMessageIndex !== null && (
-          <div className="forking-message">
-            You are creating a fork from message #{editingMessageIndex + 1}. 
-            You can now change the LLM service for this fork.
-          </div>
+      <div className="replay-container">
+        {loading ? (
+          <div className="loading">Loading conversation...</div>
+        ) : (
+          <ChatInterface
+            messages={messages}
+            isReadOnly={editingMessageIndex === null}
+            editingIndex={editingMessageIndex}
+            onMessageEdit={handleStartEditing}
+            onSendMessage={handleSendMessage}
+            onCancelEdit={resetView}
+          />
         )}
-        <ChatInterface 
-          messages={messages} 
-          onSendMessage={handleSendMessage}
-          loading={loading}
-          readOnly={false}
-          onEditMessage={handleStartEditing}
-          onCancelEdit={resetView}
-        />
       </div>
     </div>
   );

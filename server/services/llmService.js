@@ -31,11 +31,10 @@ class GeminiService extends LLMServiceInterface {
   
   /**
    * Generate system prompt based on tutor mode
-   * @param {string} context - The context provided by the student
    * @returns {string} - The system prompt
    */
-  generateSystemPrompt(context) {
-    const basePrompt = `You are an AI tutor specializing in computer science education. ${context ? 'Here is some context about the topic or problem: ' + context : ''}`;
+  generateSystemPrompt() {
+    const basePrompt = `You are an AI tutor specializing in computer science education.`;
     
     switch (this.tutorMode) {
       case 'direct':
@@ -75,22 +74,21 @@ Respond to the student in a helpful, clear, and educational manner. Provide expl
   }
   
   /**
-   * Generate LLM response based on conversation history and context
+   * Generate LLM response based on conversation history
    * @param {Object} promptData - Data for generating the prompt
    * @param {Array} promptData.messages - Array of message objects with role and content
-   * @param {string} promptData.context - Context for the conversation
    * @returns {Promise<string>} - The LLM response
    */
   async generateResponse(promptData) {
     try {
-      const { messages, context } = promptData;
+      const { messages } = promptData;
       
-      const systemPrompt = this.generateSystemPrompt(context);
+      const systemPrompt = this.generateSystemPrompt();
       
       // Initialize conversation with system prompt
       const geminiMessages = [
         { role: 'user', parts: [{ text: `${systemPrompt}\n\nPlease acknowledge these instructions.` }] },
-        { role: 'model', parts: [{ text: 'I understand my role as an AI tutor for computer science education. I will adjust my teaching style based on the specified mode and take into account any context provided. I am ready to assist the student.' }] }
+        { role: 'model', parts: [{ text: 'I understand my role as an AI tutor for computer science education. I will adjust my teaching style based on the specified mode. I am ready to assist the student.' }] }
       ];
       
       // Add conversation history
@@ -169,10 +167,9 @@ function getLLMService(serviceId) {
 }
 
 /**
- * Generate LLM response based on conversation history and context
+ * Generate LLM response based on conversation history
  * @param {Object} promptData - Data for generating the prompt
  * @param {Array} promptData.messages - Array of message objects with role and content
- * @param {string} promptData.context - Context for the conversation
  * @param {string} promptData.serviceId - ID of the LLM service to use
  * @returns {Promise<string>} - The LLM response
  */

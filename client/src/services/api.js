@@ -17,8 +17,25 @@ const updateConversation = (id, data) => api.put(`/conversations/${id}`, data);
 const deleteConversation = (id) => api.delete(`/conversations/${id}`);
 
 // API methods for messages
+/**
+ * Send a message to the LLM
+ * @param {Object} data - Message data
+ * @param {string} data.conversationId - ID of the conversation (optional)
+ * @param {string} data.message - The message content
+ * @param {string} data.serviceId - The LLM service to use (optional)
+ * @returns {Promise} - The API response
+ */
 const sendMessage = (data) => api.post('/llm/chat', data);
 
+/**
+ * Continue a conversation with a new message
+ * @param {Object} data - Message data
+ * @param {string} data.conversationId - ID of the conversation
+ * @param {string} data.message - The message content
+ * @param {number} data.messageIndex - Index to start from (optional)
+ * @param {string} data.serviceId - The LLM service to use (optional)
+ * @returns {Promise} - The API response
+ */
 const continueConversation = (data) => api.post('/llm/continue', data);
 
 // New method for editing a message and getting a new LLM response

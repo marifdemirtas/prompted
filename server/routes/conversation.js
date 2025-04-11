@@ -7,7 +7,7 @@ router.get('/', async (req, res) => {
   try {
     const conversations = await Conversation.find()
       .sort({ updatedAt: -1 })
-      .select('title context createdAt updatedAt metadata');
+      .select('title createdAt updatedAt metadata');
     
     res.json(conversations);
   } catch (error) {
@@ -35,11 +35,10 @@ router.get('/:id', async (req, res) => {
 // Create a new conversation
 router.post('/', async (req, res) => {
   try {
-    const { title, context, metadata } = req.body;
+    const { title, metadata } = req.body;
     
     const newConversation = new Conversation({
       title: title || 'New Conversation',
-      context: context || '',
       metadata
     });
     
@@ -190,7 +189,7 @@ router.post('/:id/fork/:messageIndex', async (req, res) => {
 // Update conversation context or metadata
 router.put('/:id', async (req, res) => {
   try {
-    const { title, context, metadata } = req.body;
+    const { title, metadata } = req.body;
     const { id } = req.params;
     
     const conversation = await Conversation.findById(id);
@@ -201,7 +200,6 @@ router.put('/:id', async (req, res) => {
     
     // Update conversation properties
     if (title) conversation.title = title;
-    if (context !== undefined) conversation.context = context;
     
     // Handle metadata update with deep copy to avoid reference issues
     if (metadata) {
