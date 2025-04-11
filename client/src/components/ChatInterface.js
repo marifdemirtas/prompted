@@ -9,17 +9,34 @@ const ChatInterface = ({
   messages, 
   onSendMessage, 
   loading = false, 
-  readOnly = false,
-  onEditMessage = null,
-  onReplayFromMessage = null,
+  isLoading = false,
+  isReadOnly = false,
+  editingIndex = null,
+  onMessageEdit = null,
   onCancelEdit = null
 }) => {
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [editingMessageIndex, setEditingMessageIndex] = useState(null);
+  const [editingMessageIndex, setEditingMessageIndex] = useState(editingIndex);
   const endOfMessagesRef = useRef(null);
   const inputRef = useRef(null);
+  
+  // Use either loading prop for backward compatibility
+  const isLoadingState = loading || isLoading;
+  
+  // Update editing state when prop changes
+  useEffect(() => {
+    if (editingIndex !== null) {
+      setEditingMessageIndex(editingIndex);
+      setIsEditing(true);
+      // Set input value to the message being edited
+      if (messages[editingIndex]) {
+        setInputValue(messages[editingIndex].content);
+        setIsTyping(true);
+      }
+    }
+  }, [editingIndex, messages]);
   
   // Scroll to bottom when new messages come in
   useEffect(() => {
@@ -33,18 +50,20 @@ const ChatInterface = ({
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    if (inputValue.trim() && !loading && !readOnly) {
+    if (inputValue.trim() && !isLoadingState && !isReadOnly) {
       if (isEditing && editingMessageIndex !== null) {
-        // When submitting an edited message, we're creating a new conversation branch
-        onSendMessage(inputValue, editingMessageIndex);
+        // When submitting an edited message
+        onSendMessage(inputValue);
+        setInputValue('');
+        setIsTyping(false);
+        setIsEditing(false);
+        setEditingMessageIndex(null);
       } else {
         // Normal message send
         onSendMessage(inputValue);
+        setInputValue('');
+        setIsTyping(false);
       }
-      setInputValue('');
-      setIsTyping(false);
-      setIsEditing(false);
-      setEditingMessageIndex(null);
     }
   };
   
@@ -63,16 +82,18 @@ const ChatInterface = ({
   };
 
   // Function to handle editing a message
-  const handleEditMessage = (message, index) => {
-    setInputValue(message.content);
+  const handleEditMessage = (index) => {
+    if (isReadOnly || messages[index].role !== 'student') return;
+    
+    setInputValue(messages[index].content);
     setIsTyping(true);
     setIsEditing(true);
     setEditingMessageIndex(index);
     inputRef.current?.focus();
     
-    // If onEditMessage is provided, call it
-    if (onEditMessage) {
-      onEditMessage(index);
+    // If onMessageEdit is provided, call it
+    if (onMessageEdit) {
+      onMessageEdit(index);
     }
   };
   
@@ -138,10 +159,22 @@ const ChatInterface = ({
                 <div className="message-content">
                   {renderMessageContent(message.content)}
                 </div>
+                
+                {message.role === 'student' && !isReadOnly && (
+                  <div className="message-actions">
+                    <button 
+                      className="edit-btn"
+                      onClick={() => handleEditMessage(index)}
+                      title="Edit message"
+                    >
+                      Edit
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
             
-            {loading && (
+            {isLoadingState && (
               <div className="message assistant loading">
                 <div className="message-header">
                   <span className="role">ChatGPT</span>
@@ -162,13 +195,26 @@ const ChatInterface = ({
       </div>
       
       <form className="input-container" onSubmit={handleSubmit}>
+        {isEditing && (
+          <div className="editing-indicator">
+            Editing message... 
+            <button 
+              type="button" 
+              className="cancel-edit-btn" 
+              onClick={handleCancelEdit}
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+        
         <textarea
           ref={inputRef}
           value={inputValue}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
-          placeholder="Ask anything"
-          disabled={loading || readOnly}
+          placeholder={isEditing ? "Edit your message..." : "Ask anything"}
+          disabled={isLoadingState || isReadOnly}
           rows={1}
           className={`message-input ${isTyping ? 'typing' : ''}`}
         />
@@ -176,7 +222,7 @@ const ChatInterface = ({
         <button 
           type="submit" 
           className="send-btn"
-          disabled={!inputValue.trim() || loading || readOnly}
+          disabled={!inputValue.trim() || isLoadingState || isReadOnly}
         >
           →
         </button>

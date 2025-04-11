@@ -239,6 +239,7 @@ const ReplayPage = () => {
             onMessageEdit={handleStartEditing}
             onSendMessage={handleSendMessage}
             onCancelEdit={resetView}
+            loading={loading}
           />
         )}
       </div>

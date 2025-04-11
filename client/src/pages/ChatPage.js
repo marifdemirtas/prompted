@@ -12,6 +12,7 @@ const ChatPage = () => {
     return localStorage.getItem('lastUsedLLMService') || 'gemini-direct';
   });
   const [isLLMDropdownOpen, setIsLLMDropdownOpen] = useState(false);
+  const [editingMessageIndex, setEditingMessageIndex] = useState(null);
   const dropdownRef = useRef(null);
   
   // Save the conversation when unmounting
@@ -60,6 +61,31 @@ const ChatPage = () => {
   const handleSendMessage = async (message) => {
     if (!message.trim()) return;
     
+    // If editing a message
+    if (editingMessageIndex !== null) {
+      try {
+        setLoading(true);
+        
+        const response = await api.editMessage({
+          conversationId: conversationId,
+          messageIndex: editingMessageIndex,
+          newContent: message,
+          serviceId: llmService
+        });
+        
+        // Update the conversation
+        setMessages(response.data.conversation.messages);
+        setEditingMessageIndex(null);
+      } catch (error) {
+        console.error('Error editing message:', error);
+        alert('Failed to edit message. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+    
+    // Regular message send
     // Add user message to the UI immediately
     setMessages(prev => [...prev, { role: 'student', content: message }]);
     setLoading(true);
@@ -83,6 +109,14 @@ const ChatPage = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleEditMessage = (index) => {
+    setEditingMessageIndex(index);
+  };
+  
+  const handleCancelEdit = () => {
+    setEditingMessageIndex(null);
   };
 
   const handleLLMServiceChange = (service) => {
@@ -151,7 +185,10 @@ const ChatPage = () => {
         <ChatInterface
           messages={messages}
           onSendMessage={handleSendMessage}
-          isLoading={loading}
+          loading={loading}
+          editingIndex={editingMessageIndex}
+          onMessageEdit={handleEditMessage}
+          onCancelEdit={handleCancelEdit}
         />
       </div>
     </div>
