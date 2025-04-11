@@ -226,6 +226,12 @@ const ReplayPage = () => {
             </div>
           )}
         </div>
+        
+        {editingMessageIndex !== null && (
+          <div className="fork-mode-indicator">
+            Fork Mode: Creating a new conversation branch
+          </div>
+        )}
       </div>
       
       <div className="replay-container">
@@ -234,7 +240,7 @@ const ReplayPage = () => {
         ) : (
           <ChatInterface
             messages={messages}
-            isReadOnly={editingMessageIndex === null}
+            isReadOnly={false}
             editingIndex={editingMessageIndex}
             onMessageEdit={handleStartEditing}
             onSendMessage={handleSendMessage}

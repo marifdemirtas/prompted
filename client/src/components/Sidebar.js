@@ -54,7 +54,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
     <div className={`sidebar ${isOpen ? 'open' : 'closed'}`}>
       <div className="sidebar-header">
         <div className="logo">
-          <span>ChatGPT</span>
+          <span>PromptEd</span>
         </div>
         <button className="new-chat-btn" onClick={handleNewChat}>
           <span>+ New chat</span>

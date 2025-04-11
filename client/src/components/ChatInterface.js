@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { atomDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { format } from 'date-fns';
+import { useLocation } from 'react-router-dom';
 import '../styles/ChatInterface.css';
 
 const ChatInterface = ({ 
@@ -21,6 +22,10 @@ const ChatInterface = ({
   const [editingMessageIndex, setEditingMessageIndex] = useState(editingIndex);
   const endOfMessagesRef = useRef(null);
   const inputRef = useRef(null);
+  
+  // Check if we're in a replay page (for different edit button text)
+  const location = useLocation();
+  const isReplayPage = location.pathname.includes('/replay/');
   
   // Use either loading prop for backward compatibility
   const isLoadingState = loading || isLoading;
@@ -152,7 +157,7 @@ const ChatInterface = ({
               >
                 <div className="message-header">
                   <span className="role">
-                    {message.role === 'student' ? 'You' : 'ChatGPT'}
+                    {message.role === 'student' ? 'You' : 'Tutor'}
                   </span>
                 </div>
                 
@@ -163,11 +168,11 @@ const ChatInterface = ({
                 {message.role === 'student' && !isReadOnly && (
                   <div className="message-actions">
                     <button 
-                      className="edit-btn"
+                      className={`edit-btn ${isReplayPage ? 'fork-edit' : ''}`}
                       onClick={() => handleEditMessage(index)}
-                      title="Edit message"
+                      title={isReplayPage ? "Fork conversation and edit message" : "Edit message"}
                     >
-                      Edit
+                      {isReplayPage ? "Fork & Edit" : "Edit"}
                     </button>
                   </div>
                 )}
@@ -177,7 +182,7 @@ const ChatInterface = ({
             {isLoadingState && (
               <div className="message assistant loading">
                 <div className="message-header">
-                  <span className="role">ChatGPT</span>
+                  <span className="role">Tutor</span>
                 </div>
                 <div className="message-content">
                   <div className="typing-indicator">
@@ -197,7 +202,7 @@ const ChatInterface = ({
       <form className="input-container" onSubmit={handleSubmit}>
         {isEditing && (
           <div className="editing-indicator">
-            Editing message... 
+            {isReplayPage ? "Forking & Editing message..." : "Editing message..."} 
             <button 
               type="button" 
               className="cancel-edit-btn" 
@@ -213,7 +218,7 @@ const ChatInterface = ({
           value={inputValue}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
-          placeholder={isEditing ? "Edit your message..." : "Ask anything"}
+          placeholder={isEditing ? (isReplayPage ? "Edit message (will create a new fork)..." : "Edit your message...") : "Ask anything"}
           disabled={isLoadingState || isReadOnly}
           rows={1}
           className={`message-input ${isTyping ? 'typing' : ''}`}
@@ -221,10 +226,10 @@ const ChatInterface = ({
         
         <button 
           type="submit" 
-          className="send-btn"
+          className={`send-btn ${isEditing && isReplayPage ? 'fork-btn' : ''}`}
           disabled={!inputValue.trim() || isLoadingState || isReadOnly}
         >
-          →
+          {isEditing && isReplayPage ? 'Fork' : '→'}
         </button>
       </form>
     </div>

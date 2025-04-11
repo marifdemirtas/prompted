@@ -150,6 +150,21 @@
   background: rgba(255, 255, 255, 0.1);
 }
 
+.edit-btn.fork-edit {
+  background-color: rgba(74, 108, 247, 0.1);
+  border: 1px solid rgba(74, 108, 247, 0.4);
+  opacity: 0;
+}
+
+.message.student:hover .edit-btn.fork-edit {
+  opacity: 0.9;
+}
+
+.edit-btn.fork-edit:hover {
+  background-color: rgba(74, 108, 247, 0.2);
+  border: 1px solid rgba(74, 108, 247, 0.6);
+}
+
 .loading .message-content {
   display: flex;
   align-items: center;
@@ -242,8 +257,22 @@
   font-weight: bold;
 }
 
+.send-btn.fork-btn {
+  width: auto;
+  padding: 0 10px;
+  background-color: rgba(74, 108, 247, 0.8);
+}
+
+.send-btn.fork-btn:hover {
+  background-color: rgba(74, 108, 247, 1);
+}
+
 .send-btn:disabled {
   background-color: rgba(16, 163, 127, 0.5);
+}
+
+.send-btn.fork-btn:disabled {
+  background-color: rgba(74, 108, 247, 0.4);
 }
 
 .edit-actions {
