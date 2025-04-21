@@ -150,38 +150,15 @@ router.post('/:id/fork/:messageIndex', async (req, res) => {
 
     // Determine the title for the forked conversation
     let forkedTitle;
-    const serviceInfo = conversation.metadata.llmService || 
-        `gemini-${conversation.metadata.tutorMode || 'dialogue'}`;
     
-    // Format service name for display
-    const serviceFormatted = serviceInfo.split('-').map(word => 
-      word.charAt(0).toUpperCase() + word.slice(1)
-    ).join(' ');
-    
-    // Check if the title already has a service prefix
-    const titleRegex = /^\[([\w\s]+)\]\s(.+)$/;
-    const titleMatch = "";//conversation.title.match(titleRegex);
-    
-    if (titleMatch) {
-      // Keep the service name from the original title
-      const contentPart = titleMatch[2];
-      // Limit to ensure total length doesn't exceed 100 chars
-      const prefix = `F: `;
-      const maxContentLength = 100 - prefix.length;
-      const truncatedContent = contentPart.length > maxContentLength
-        ? contentPart.substring(0, maxContentLength - 3) + '...'
-        : contentPart;
-      forkedTitle = prefix + truncatedContent;
-    } else {
-      // Create a new formatted title
-      const prefix = `F: `;
-      const maxContentLength = 100 - prefix.length;
-      const baseContent = conversation.title.replace(/^F-/, ''); // Remove existing fork prefix if any
-      const truncatedContent = baseContent.length > maxContentLength
-        ? baseContent.substring(0, maxContentLength - 3) + '...'
-        : baseContent;
-      forkedTitle = prefix + truncatedContent;
-    }
+    // Create a new formatted title
+    const prefix = `F: `;
+    const maxContentLength = 100 - prefix.length;
+    const baseContent = conversation.title.replace(/^F-/, ''); // Remove existing fork prefix if any
+    const truncatedContent = baseContent.length > maxContentLength
+      ? baseContent.substring(0, maxContentLength - 3) + '...'
+      : baseContent;
+    forkedTitle = prefix + truncatedContent;
     
     const forkedConversation = new Conversation({
       title: forkedTitle,

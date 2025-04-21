@@ -84,18 +84,13 @@ router.post('/chat', async (req, res) => {
         conversation.metadata = updatedMetadata;
       }
     } else {
-      // Get the service name to use in the title
-      const serviceFormatted = selectedServiceId.split('-').map(word => 
-        word.charAt(0).toUpperCase() + word.slice(1)
-      ).join(' ');
-      
-      const titlePrefix = `[${serviceFormatted}] `;
-      const maxQueryLength = 100 - titlePrefix.length;
-      const truncatedMessage = message.length > maxQueryLength 
-        ? message.substring(0, maxQueryLength - 3) + '...' 
+      // Create a title from the message
+      const maxTitleLength = 100;
+      const truncatedMessage = message.length > maxTitleLength 
+        ? message.substring(0, maxTitleLength - 3) + '...' 
         : message;
       
-      const title = titlePrefix + truncatedMessage;
+      const title = truncatedMessage;
       
       // Create a new conversation
       conversation = new Conversation({

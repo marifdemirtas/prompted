@@ -28,7 +28,8 @@ const Sidebar = () => {
 
   const handleNewChat = () => {
     localStorage.removeItem('lastConversationId');
-    navigate('/');
+    console.log('New chat button clicked');
+    window.location.href = '/';
   };
 
   const handleSelectConversation = (id) => {

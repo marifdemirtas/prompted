@@ -3,7 +3,6 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import ChatPage from './pages/ChatPage';
 import ConversationsPage from './pages/ConversationsPage';
-import ReplayPage from './pages/ReplayPage';
 import LoginPage from './pages/LoginPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
@@ -47,7 +46,7 @@ function App() {
                 <>
                   <Sidebar />
                   <main className="main-content">
-                    <ReplayPage />
+                    <ChatPage />
                   </main>
                 </>
               } 
