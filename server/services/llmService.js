@@ -23,7 +23,7 @@ class LLMServiceInterface {
  * Gemini LLM Service with different tutor modes
  */
 class GeminiService extends LLMServiceInterface {
-  constructor(tutorMode = 'dialogue') {
+  constructor(tutorMode = 'direct') {
     super();
     this.tutorMode = tutorMode;
     this.model_string = process.env.GEMINI_MODEL || 'gemini-2.0-flash-lite';
@@ -40,27 +40,17 @@ class GeminiService extends LLMServiceInterface {
       case 'direct':
         return `${basePrompt}
         
-Start with the token DIRECT. When responding to the student, provide direct answers to their questions without additional explanation or scaffolding. Be concise and precise, focusing only on the exact information requested.`;
+Start with the token "DIRECT ANSWER". When responding to the student, provide direct answers to their questions without additional explanation or scaffolding. Be concise and precise, focusing only on the exact information requested.`;
         
       case 'explanation':
         return `${basePrompt}
         
-When responding to the student, provide clear explanations that break down concepts. Include examples where helpful, but don't use Socratic questioning. Teach the material directly with comprehensive explanations.`;
-        
-      case 'dialogue':
-        return `${basePrompt}
-        
-When responding to the student, engage in a dialogue by asking reflective questions that guide their thinking. Balance providing some information with questions that encourage them to think through the problem. Use the Socratic method to foster deeper understanding.`;
-        
+Start with the token "DIRECT EXPLANATION". When responding to the student, provide clear explanations that break down concepts. Include examples where helpful, but don't use Socratic questioning. Teach the material directly with comprehensive explanations.`;
+                
       case 'scaffolding':
         return `${basePrompt}
         
-When responding to the student, provide cognitive scaffolding to help them solve problems themselves. Break problems into steps, provide hints rather than answers, and gradually build their understanding. Focus on guiding their learning process rather than giving solutions.`;
-        
-      default:
-        return `${basePrompt}
-        
-Respond to the student in a helpful, clear, and educational manner. Provide explanations that build understanding and encourage learning.`;
+Start with the token "COGNITIVE SCF". When responding to the student, provide cognitive scaffolding to help them solve problems themselves. Break problems into steps, provide hints rather than answers, and gradually build their understanding. Focus on guiding their learning process rather than giving solutions.`;
     }
   }
   
@@ -162,8 +152,8 @@ function getLLMService(serviceId) {
     return new GeminiService(mode);
   }
   
-  // Default to Gemini with dialogue mode if provider is not recognized
-  return new GeminiService('dialogue');
+  // Default to Gemini with direct answer mode if provider is not recognized
+  return new GeminiService('direct');
 }
 
 /**

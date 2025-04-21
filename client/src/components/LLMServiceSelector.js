@@ -29,23 +29,18 @@ const LLMServiceSelector = ({
   const llmServices = [
     {
       id: 'gemini-direct',
-      label: 'Gemini Direct',
-      description: 'Gemini provides concise, direct answers without additional explanation.'
+      label: 'Alpha',
+      description: 'Alpha Tutor provides concise, direct answers without additional explanation.'
     },
     {
       id: 'gemini-explanation',
-      label: 'Gemini Explanation',
-      description: 'Gemini gives detailed explanations with examples to teach concepts.'
-    },
-    {
-      id: 'gemini-dialogue',
-      label: 'Gemini Dialogue',
-      description: 'Gemini uses Socratic dialogue with questions to foster understanding.'
+      label: 'Gamma',
+      description: 'Gamma Tutor provides detailed explanations with examples to teach concepts.'
     },
     {
       id: 'gemini-scaffolding',
-      label: 'Gemini Scaffolding',
-      description: 'Gemini breaks problems into steps and provides hints rather than answers.'
+      label: 'Omega',
+      description: 'Omega Tutor breaks problems into steps and provides hints rather than answers.'
     }
   ];
   

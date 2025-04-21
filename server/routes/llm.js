@@ -21,12 +21,12 @@ async function isServiceAllowedForUser(userId, serviceId) {
 async function getUserDefaultService(userId) {
   try {
     const user = await User.findById(userId);
-    if (!user) return 'gemini-dialogue'; // Fallback default
+    if (!user) return 'gemini-direct'; // Fallback default
     
     return user.defaultService;
   } catch (error) {
     console.error('Error getting user default service:', error);
-    return 'gemini-dialogue'; // Fallback default
+    return 'gemini-direct'; // Fallback default
   }
 }
 
@@ -99,10 +99,11 @@ router.post('/chat', async (req, res) => {
         user: userId,
         metadata: {
           // For backward compatibility, store both tutorMode and llmService
-          tutorMode: selectedServiceId.split('-')[1] || 'dialogue',
+          tutorMode: selectedServiceId.split('-')[1] || 'direct',
           llmService: selectedServiceId
         }
       });
+      console.log("conversation", conversation.metadata.llmService);
       
       await conversation.save();
     }

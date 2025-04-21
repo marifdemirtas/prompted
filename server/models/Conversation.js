@@ -46,11 +46,11 @@ const ConversationSchema = new mongoose.Schema({
   metadata: {
     tutorMode: {
       type: String,
-      default: 'dialogue'
+      default: 'direct'
     },
     llmService: {
       type: String,
-      default: 'gemini-dialogue'
+      default: 'gemini-direct'
     },
     subject: {
       type: String,
@@ -95,7 +95,7 @@ ConversationSchema.methods.forkFromMessage = function(messageIndex) {
   // Determine the title for the forked conversation
   let forkedTitle;
   const serviceInfo = this.metadata.llmService || 
-      `gemini-${this.metadata.tutorMode || 'dialogue'}`;
+      `gemini-${this.metadata.tutorMode || 'direct'}`;
   
   // Format service name for display
   const serviceFormatted = serviceInfo.split('-').map(word => 

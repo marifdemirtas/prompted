@@ -71,14 +71,6 @@ const LoginPage = () => {
           </button>
         </form>
         
-        <div className="help-text">
-          <p>Use one of the default usernames created by the database initialization script:</p>
-          <ul>
-            <li><strong>admin</strong> - access to all LLM services</li>
-            <li><strong>student1</strong> - dialogue and explanation services</li>
-            <li><strong>student2</strong> - direct and explanation services</li>
-          </ul>
-        </div>
       </div>
     </div>
   );

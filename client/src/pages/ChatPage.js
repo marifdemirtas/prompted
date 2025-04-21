@@ -267,26 +267,16 @@ const ChatPage = () => {
   };
 
   // Get available LLM services
-  const llmServices = isReplayMode ? [
-    {
-      id: 'gemini-direct',
-      label: 'Gemini Direct'
-    },
-    {
-      id: 'gemini-explanation',
-      label: 'Gemini Explanation'
-    },
-    {
-      id: 'gemini-dialogue',
-      label: 'Gemini Dialogue'
-    },
-    {
-      id: 'gemini-scaffolding',
-      label: 'Gemini Scaffolding'
-    },
-  ] : (currentUser?.allowedServices?.map(serviceId => {
+  const llmServices = (currentUser?.allowedServices?.map(serviceId => {
     const [provider, mode] = serviceId.split('-');
-    const label = `${provider.charAt(0).toUpperCase() + provider.slice(1)} ${mode.charAt(0).toUpperCase() + mode.slice(1)}`;
+
+    let lookupTable = {
+      "gemini-direct": "Alpha Tutor",
+      "gemini-explanation": "Gamma Tutor",
+      "gemini-scaffolding": "Omega Tutor"
+    }
+
+    const label = lookupTable[serviceId] || serviceId;
     
     return {
       id: serviceId,
@@ -299,7 +289,10 @@ const ChatPage = () => {
     llmServices.find(service => service.id === llmService) || { label: 'LLM Service' } :
     { label: 'Select Service' };
   
-  
+    console.log("currentService", currentService);
+    console.log("currentService", currentService.label);
+
+
   if (isReplayMode && error) {
     return (
       <div className="error-container">

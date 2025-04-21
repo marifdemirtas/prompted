@@ -1,34 +1,35 @@
 /**
  * Database initialization script
- * Run this script to initialize the database with a default admin user
+ * Run this script to initialize the database with users from CSV file
  * Usage: node scripts/init-db.js
  */
 
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
+const fs = require('fs');
+const path = require('path');
+const csv = require('csv-parse/sync');
 const User = require('../models/User');
 
 // Load environment variables
 dotenv.config();
 
-// Default users to create
-const defaultUsers = [
-  {
-    username: 'admin',
-    allowedServices: ['gemini-direct', 'gemini-explanation', 'gemini-dialogue', 'gemini-scaffolding'],
-    defaultService: 'gemini-dialogue'
-  },
-  {
-    username: 'student1',
-    allowedServices: ['gemini-dialogue'],
-    defaultService: 'gemini-dialogue'
-  },
-  {
-    username: 'student2',
-    allowedServices: ['gemini-explanation'],
-    defaultService: 'gemini-explanation'
-  }
-];
+// Function to read users from CSV file
+function readUsersFromCSV() {
+  const csvFilePath = path.join(__dirname, '../data/users.csv');
+  const fileContent = fs.readFileSync(csvFilePath, 'utf-8');
+  
+  const records = csv.parse(fileContent, {
+    columns: true,
+    skip_empty_lines: true
+  });
+
+  return records.map(record => ({
+    username: record.username,
+    allowedServices: record.allowedServices.split(','),
+    defaultService: record.defaultService
+  }));
+}
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/prompted')
@@ -46,8 +47,12 @@ async function createUsers() {
     await User.deleteMany({});
     console.log('All users removed');
     
-    // For each default user
-    for (const userData of defaultUsers) {      
+    // Read users from CSV file
+    const users = readUsersFromCSV();
+    console.log(`Found ${users.length} users in CSV file`);
+    
+    // For each user from CSV
+    for (const userData of users) {      
       // Create new user
       const newUser = new User(userData);
       await newUser.save();

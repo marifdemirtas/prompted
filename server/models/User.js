@@ -9,11 +9,11 @@ const UserSchema = new mongoose.Schema({
   },
   allowedServices: {
     type: [String],
-    default: ['gemini-direct', 'gemini-explanation', 'gemini-dialogue', 'gemini-scaffolding']
+    default: ['gemini-direct', 'gemini-explanation', 'gemini-scaffolding']
   },
   defaultService: {
     type: String,
-    default: 'gemini-dialogue'
+    default: 'gemini-direct'
   },
   createdAt: {
     type: Date,
