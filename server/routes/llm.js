@@ -1,35 +1,81 @@
 const express = require('express');
 const router = express.Router();
-const { generateLLMResponse, generateConversationTitle } = require('../services/llmService');
+const { generateLLMResponse } = require('../services/llmService');
 const Conversation = require('../models/Conversation');
+const User = require('../models/User');
+
+// Helper function to check if a service is allowed for the user
+async function isServiceAllowedForUser(userId, serviceId) {
+  try {
+    const user = await User.findById(userId);
+    if (!user) return false;
+    
+    return user.allowedServices.includes(serviceId);
+  } catch (error) {
+    console.error('Error checking allowed services:', error);
+    return false;
+  }
+}
+
+// Helper function to get a user's default service
+async function getUserDefaultService(userId) {
+  try {
+    const user = await User.findById(userId);
+    if (!user) return 'gemini-dialogue'; // Fallback default
+    
+    return user.defaultService;
+  } catch (error) {
+    console.error('Error getting user default service:', error);
+    return 'gemini-dialogue'; // Fallback default
+  }
+}
 
 // Process a message and get LLM response
 router.post('/chat', async (req, res) => {
   try {
-    const { conversationId, message, tutorMode, serviceId } = req.body;
+    const { conversationId, message, serviceId } = req.body;
+    const userId = req.session.userId;
     
     if (!message) {
       return res.status(400).json({ message: 'Message content is required' });
     }
     
     let conversation;
+    let selectedServiceId = serviceId;
+    
+    // Check if the requested service is allowed for this user
+    if (selectedServiceId) {
+      const isAllowed = await isServiceAllowedForUser(userId, selectedServiceId);
+      
+      if (!isAllowed) {
+        // If not allowed, fall back to user's default service
+        const defaultService = await getUserDefaultService(userId);
+        selectedServiceId = defaultService;
+      }
+    } else {
+      // If no service specified, use user's default
+      selectedServiceId = await getUserDefaultService(userId);
+    }
     
     // Find or create conversation
     if (conversationId) {
-      conversation = await Conversation.findById(conversationId);
+      conversation = await Conversation.findOne({ 
+        _id: conversationId, 
+        user: userId 
+      });
       
       if (!conversation) {
         return res.status(404).json({ message: 'Conversation not found' });
       }
       
       // If a different serviceId is provided, update the conversation's metadata
-      if (serviceId && serviceId !== conversation.metadata.llmService) {
+      if (selectedServiceId && selectedServiceId !== conversation.metadata.llmService) {
         // Create a deep copy of metadata and update it
         const updatedMetadata = JSON.parse(JSON.stringify(conversation.metadata));
-        updatedMetadata.llmService = serviceId;
+        updatedMetadata.llmService = selectedServiceId;
         
         // For backward compatibility, also update tutorMode if the service follows the expected format
-        const [provider, mode] = serviceId.split('-');
+        const [provider, mode] = selectedServiceId.split('-');
         if (provider === 'gemini' && mode) {
           updatedMetadata.tutorMode = mode;
         }
@@ -38,30 +84,8 @@ router.post('/chat', async (req, res) => {
         conversation.metadata = updatedMetadata;
       }
     } else {
-      // Determine which service to use
-      // First check if serviceId is provided in the request
-      // If not, try to find the most recent conversation and use its service
-      let service = serviceId;
-      
-      if (!service) {
-        // Find the most recent conversation with a valid llmService
-        const recentConversation = await Conversation.findOne({
-          'metadata.llmService': { $exists: true }
-        }).sort({ updatedAt: -1 });
-        
-        if (recentConversation && recentConversation.metadata.llmService) {
-          service = recentConversation.metadata.llmService;
-        } else if (tutorMode) {
-          // Fallback to tutorMode if provided
-          service = `gemini-${tutorMode}`;
-        } else {
-          // Default fallback
-          service = 'gemini-dialogue';
-        }
-      }
-      
       // Get the service name to use in the title
-      const serviceFormatted = service.split('-').map(word => 
+      const serviceFormatted = selectedServiceId.split('-').map(word => 
         word.charAt(0).toUpperCase() + word.slice(1)
       ).join(' ');
       
@@ -77,10 +101,11 @@ router.post('/chat', async (req, res) => {
       conversation = new Conversation({
         title: title,
         messages: [],
+        user: userId,
         metadata: {
           // For backward compatibility, store both tutorMode and llmService
-          tutorMode: service.split('-')[1] || 'dialogue',
-          llmService: service
+          tutorMode: selectedServiceId.split('-')[1] || 'dialogue',
+          llmService: selectedServiceId
         }
       });
       
@@ -124,16 +149,20 @@ router.post('/chat', async (req, res) => {
   }
 });
 
-// Use LLM to generate a response from a forked conversation
+// Continue a conversation
 router.post('/continue', async (req, res) => {
   try {
     const { conversationId, messageIndex, serviceId } = req.body;
+    const userId = req.session.userId;
     
     if (!conversationId) {
       return res.status(400).json({ message: 'Conversation ID is required' });
     }
     
-    const conversation = await Conversation.findById(conversationId);
+    const conversation = await Conversation.findOne({ 
+      _id: conversationId, 
+      user: userId 
+    });
     
     if (!conversation) {
       return res.status(404).json({ message: 'Conversation not found' });
@@ -154,28 +183,39 @@ router.post('/continue', async (req, res) => {
       return res.status(400).json({ message: 'Last message should be from student to continue' });
     }
     
-    // If a different serviceId is provided, update the conversation's metadata
-    if (serviceId && serviceId !== conversation.metadata.llmService) {
-      // Create a deep copy of metadata and update it
-      const updatedMetadata = JSON.parse(JSON.stringify(conversation.metadata));
-      updatedMetadata.llmService = serviceId;
+    let selectedServiceId = serviceId;
+    
+    // Check if the requested service is allowed for this user
+    if (selectedServiceId) {
+      const isAllowed = await isServiceAllowedForUser(userId, selectedServiceId);
       
-      // For backward compatibility, also update tutorMode if the service follows the expected format
-      const [provider, mode] = serviceId.split('-');
-      if (provider === 'gemini' && mode) {
-        updatedMetadata.tutorMode = mode;
+      if (!isAllowed) {
+        // If not allowed, fall back to current conversation service or user's default
+        selectedServiceId = conversation.metadata.llmService || await getUserDefaultService(userId);
       }
       
-      // Set the updated metadata
-      conversation.metadata = updatedMetadata;
-      
-      // Save changes before generating response
-      await conversation.save();
+      // If a different serviceId is provided, update the conversation's metadata
+      if (selectedServiceId !== conversation.metadata.llmService) {
+        // Create a deep copy of metadata and update it
+        const updatedMetadata = JSON.parse(JSON.stringify(conversation.metadata));
+        updatedMetadata.llmService = selectedServiceId;
+        
+        // For backward compatibility, also update tutorMode if the service follows the expected format
+        const [provider, mode] = selectedServiceId.split('-');
+        if (provider === 'gemini' && mode) {
+          updatedMetadata.tutorMode = mode;
+        }
+        
+        // Set the updated metadata
+        conversation.metadata = updatedMetadata;
+        
+        // Save changes before generating response
+        await conversation.save();
+      }
+    } else {
+      // If no service specified, use conversation's current service
+      selectedServiceId = conversation.metadata.llmService || await getUserDefaultService(userId);
     }
-    
-    // Select service to use (either the provided one or the conversation's stored one)
-    const selectedServiceId = serviceId || conversation.metadata.llmService || 
-                          `gemini-${conversation.metadata.tutorMode || 'dialogue'}`;
     
     // Generate LLM response
     const promptData = {
@@ -207,81 +247,99 @@ router.post('/continue', async (req, res) => {
   }
 });
 
-// Add route to handle message editing
+// Edit a message and get a new response
 router.post('/edit', async (req, res) => {
   try {
     const { conversationId, messageIndex, newContent, serviceId } = req.body;
+    const userId = req.session.userId;
     
     if (!conversationId || messageIndex === undefined || !newContent) {
-      return res.status(400).json({ message: 'Missing required parameters' });
+      return res.status(400).json({ message: 'Conversation ID, message index, and new content are required' });
     }
     
-    const conversation = await Conversation.findById(conversationId);
+    const conversation = await Conversation.findOne({ 
+      _id: conversationId, 
+      user: userId 
+    });
     
     if (!conversation) {
       return res.status(404).json({ message: 'Conversation not found' });
     }
     
-    const idx = parseInt(messageIndex);
+    const messageIdx = parseInt(messageIndex);
     
-    if (isNaN(idx) || idx < 0 || idx >= conversation.messages.length) {
+    if (isNaN(messageIdx) || messageIdx < 0 || messageIdx >= conversation.messages.length) {
       return res.status(400).json({ message: 'Invalid message index' });
     }
     
-    // Update the message
-    const message = conversation.messages[idx];
-    if (!message.edited) {
-      message.originalContent = message.content;
-      message.edited = true;
+    // Check if this is a student message (only student messages can be edited)
+    const targetMessage = conversation.messages[messageIdx];
+    if (targetMessage.role !== 'student') {
+      return res.status(400).json({ message: 'Only student messages can be edited' });
     }
-    message.content = newContent;
     
-    // If a different serviceId is provided, update the conversation's metadata
-    if (serviceId && serviceId !== conversation.metadata.llmService) {
-      // Create a deep copy of metadata and update it
-      const updatedMetadata = JSON.parse(JSON.stringify(conversation.metadata));
-      updatedMetadata.llmService = serviceId;
+    let selectedServiceId = serviceId;
+    
+    // Check if the requested service is allowed for this user
+    if (selectedServiceId) {
+      const isAllowed = await isServiceAllowedForUser(userId, selectedServiceId);
       
-      // For backward compatibility, also update tutorMode if the service follows the expected format
-      const [provider, mode] = serviceId.split('-');
-      if (provider === 'gemini' && mode) {
-        updatedMetadata.tutorMode = mode;
+      if (!isAllowed) {
+        // If not allowed, fall back to current conversation service or user's default
+        selectedServiceId = conversation.metadata.llmService || await getUserDefaultService(userId);
       }
       
-      // Set the updated metadata
-      conversation.metadata = updatedMetadata;
+      // If a different serviceId is provided, update the conversation's metadata
+      if (selectedServiceId !== conversation.metadata.llmService) {
+        // Create a deep copy of metadata and update it
+        const updatedMetadata = JSON.parse(JSON.stringify(conversation.metadata));
+        updatedMetadata.llmService = selectedServiceId;
+        
+        // Set the updated metadata
+        conversation.metadata = updatedMetadata;
+      }
+    } else {
+      // If no service specified, use conversation's current service
+      selectedServiceId = conversation.metadata.llmService || await getUserDefaultService(userId);
     }
     
-    // If we're editing a student message and there's a next message from the assistant, regenerate that response
-    const isStudent = message.role === 'student';
-    const hasNextAssistantMessage = isStudent && idx + 1 < conversation.messages.length && 
-                                  conversation.messages[idx + 1].role === 'assistant';
-    
-    if (hasNextAssistantMessage) {
-      // Select service to use (either the provided one or the conversation's stored one)
-      const selectedServiceId = serviceId || conversation.metadata.llmService || 
-                             `gemini-${conversation.metadata.tutorMode || 'dialogue'}`;
-      
-      // Generate a new response based on the edited message
-      const promptData = {
-        messages: conversation.messages.slice(0, idx + 1).map(msg => ({
-          role: msg.role,
-          content: msg.content
-        })),
-        serviceId: selectedServiceId
-      };
-      
-      const llmResponse = await generateLLMResponse(promptData);
-      
-      // Update the assistant message
-      conversation.messages[idx + 1].content = llmResponse;
-      conversation.messages[idx + 1].edited = true;
+    // Save original content if not already saved
+    if (!targetMessage.edited) {
+      targetMessage.originalContent = targetMessage.content;
+      targetMessage.edited = true;
     }
+    
+    // Update message content
+    targetMessage.content = newContent;
+    targetMessage.timestamp = Date.now();
+    
+    // Keep messages only up to the edited message (removing all subsequent messages)
+    conversation.messages = conversation.messages.slice(0, messageIdx + 1);
+    
+    await conversation.save();
+    
+    // Generate new LLM response
+    const promptData = {
+      messages: conversation.messages.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      })),
+      serviceId: selectedServiceId
+    };
+    
+    const llmResponse = await generateLLMResponse(promptData);
+    
+    // Add assistant response to conversation
+    conversation.messages.push({
+      role: 'assistant',
+      content: llmResponse
+    });
     
     await conversation.save();
     
     res.json({
-      success: true,
+      conversationId: conversation._id,
+      response: llmResponse,
       conversation
     });
   } catch (error) {

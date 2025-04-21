@@ -1,19 +1,27 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ChatInterface from '../components/ChatInterface';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import '../styles/ChatPage.css';
 
 const ChatPage = () => {
   const [messages, setMessages] = useState([]);
   const [conversationId, setConversationId] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [llmService, setLLMService] = useState(() => {
-    // Initialize from localStorage if available, otherwise default to 'gemini-dialogue'
-    return localStorage.getItem('lastUsedLLMService') || 'gemini-direct';
-  });
+  const [llmService, setLLMService] = useState(null);
   const [isLLMDropdownOpen, setIsLLMDropdownOpen] = useState(false);
   const [editingMessageIndex, setEditingMessageIndex] = useState(null);
+  const { currentUser } = useAuth();
   const dropdownRef = useRef(null);
+  
+  // Initialize LLM service when user changes
+  useEffect(() => {
+    if (currentUser) {
+      // Initialize from user default service
+      setLLMService(currentUser.defaultService);
+      localStorage.setItem('lastUsedLLMService', currentUser.defaultService);
+    }
+  }, [currentUser]);
   
   // Save the conversation when unmounting
   useEffect(() => {
@@ -49,14 +57,19 @@ const ChatPage = () => {
           setConversationId(lastConversationId);
           setMessages(response.data.messages);
           if (response.data.metadata.llmService) {
-            setLLMService(response.data.metadata.llmService);
+            // Only set if the service is allowed for this user
+            if (currentUser && currentUser.allowedServices.includes(response.data.metadata.llmService)) {
+              setLLMService(response.data.metadata.llmService);
+            }
           }
         })
         .catch(error => {
           console.error('Error loading last conversation:', error);
+          // Clear invalid conversation ID
+          localStorage.removeItem('lastConversationId');
         });
     }
-  }, []);
+  }, [currentUser]);
   
   const handleSendMessage = async (message) => {
     if (!message.trim()) return;
@@ -132,27 +145,21 @@ const ChatPage = () => {
     }
   };
   
-  const llmServices = [
-    {
-      id: 'gemini-direct',
-      label: 'Gemini Direct'
-    },
-    {
-      id: 'gemini-explanation',
-      label: 'Gemini Explanation'
-    },
-    {
-      id: 'gemini-dialogue',
-      label: 'Gemini Dialogue'
-    },
-    {
-      id: 'gemini-scaffolding',
-      label: 'Gemini Scaffolding'
-    },
-  ];
+  // Get available LLM services from user's allowed services
+  const llmServices = currentUser?.allowedServices?.map(serviceId => {
+    const [provider, mode] = serviceId.split('-');
+    const label = `${provider.charAt(0).toUpperCase() + provider.slice(1)} ${mode.charAt(0).toUpperCase() + mode.slice(1)}`;
+    
+    return {
+      id: serviceId,
+      label
+    };
+  }) || [];
   
   // Find the current service label
-  const currentService = llmServices.find(service => service.id === llmService) || { label: 'LLM Service' };
+  const currentService = llmService ? 
+    llmServices.find(service => service.id === llmService) || { label: 'LLM Service' } :
+    { label: 'Select Service' };
   
   return (
     <div className="chat-page">

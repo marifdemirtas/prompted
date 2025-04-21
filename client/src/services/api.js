@@ -2,8 +2,27 @@ import axios from 'axios';
 
 // Create axios instance with base URL
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:8000/api'
+  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:8000/api',
+  withCredentials: true // Important for cookies/sessions
 });
+
+// Auth API methods
+const login = (username) => api.post('/auth/login', { username });
+
+const logout = () => api.post('/auth/logout');
+
+const getCurrentUser = () => api.get('/auth/me');
+
+// User API methods
+const getUsers = () => api.get('/users');
+
+const getUser = (id) => api.get(`/users/${id}`);
+
+const createUser = (data) => api.post('/users', data);
+
+const updateUser = (id, data) => api.put(`/users/${id}`, data);
+
+const deleteUser = (id) => api.delete(`/users/${id}`);
 
 // API methods for conversations
 const getConversations = () => api.get('/conversations');
@@ -58,18 +77,19 @@ api.interceptors.response.use(
   error => {
     console.error('API Error:', error.response || error);
     
-    // Customize error handling here
-    if (error.response) {
-      // The request was made and the server responded with a status code
-      // that falls out of the range of 2xx
-      console.error('Response data:', error.response.data);
-      console.error('Response status:', error.response.status);
-    } else if (error.request) {
-      // The request was made but no response was received
-      console.error('No response received:', error.request);
-    } else {
-      // Something happened in setting up the request that triggered an Error
-      console.error('Request error:', error.message);
+    // Handle authentication errors
+    if (error.response && error.response.status === 401) {
+      // Don't redirect if this is already an auth endpoint request
+      const isAuthEndpoint = error.config.url.includes('/auth/');
+      
+      if (!isAuthEndpoint) {
+        // Clear local storage and redirect to login page
+        localStorage.removeItem('lastConversationId');
+        localStorage.removeItem('lastUsedLLMService');
+        
+        // Redirect to login page
+        window.location.href = '/login';
+      }
     }
     
     return Promise.reject(error);
@@ -77,11 +97,26 @@ api.interceptors.response.use(
 );
 
 export default {
+  // Auth methods
+  login,
+  logout,
+  getCurrentUser,
+  
+  // User methods
+  getUsers,
+  getUser,
+  createUser,
+  updateUser,
+  deleteUser,
+  
+  // Conversation methods
   getConversations,
   getConversation,
   createConversation,
   updateConversation,
   deleteConversation,
+  
+  // Message methods
   sendMessage,
   continueConversation,
   addMessage,

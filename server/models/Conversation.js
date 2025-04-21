@@ -31,6 +31,10 @@ const ConversationSchema = new mongoose.Schema({
     default: 'New Conversation'
   },
   messages: [MessageSchema],
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
   createdAt: {
     type: Date,
     default: Date.now
@@ -129,7 +133,8 @@ ConversationSchema.methods.forkFromMessage = function(messageIndex) {
   const forkedConversation = {
     title: forkedTitle,
     messages: this.messages.slice(0, messageIndex + 1),
-    metadata: metadataCopy
+    metadata: metadataCopy,
+    user: this.user // Preserve the user reference in the fork
   };
   
   return this.model('Conversation').create(forkedConversation);

@@ -1,144 +1,145 @@
 .sidebar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 300px;
+  background-color: #1e293b;
+  border-right: 1px solid #334155;
   height: 100vh;
-  background-color: #202123;
-  color: #ffffff;
+  width: 300px;
   display: flex;
   flex-direction: column;
-  z-index: 100;
-  transition: transform 0.3s ease;
-}
-
-.sidebar.closed {
-  transform: translateX(-100%);
+  overflow: hidden;
 }
 
 .sidebar-header {
-  padding: 14px 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 1rem;
+  border-bottom: 1px solid #334155;
 }
 
 .logo {
-  font-size: 20px;
+  display: flex;
+  align-items: center;
+  font-size: 1.5rem;
   font-weight: bold;
-  margin-bottom: 15px;
-  padding-left: 10px;
+  color: #60a5fa;
+  margin-bottom: 1rem;
 }
 
 .new-chat-btn {
   width: 100%;
-  padding: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 6px;
-  background: transparent;
+  padding: 0.75rem;
+  background-color: #2563eb;
   color: white;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
   transition: background-color 0.2s;
+  font-weight: 500;
 }
 
 .new-chat-btn:hover {
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: #1d4ed8;
 }
 
 .conversations-list {
   flex: 1;
   overflow-y: auto;
-  padding: 10px;
-}
-
-.conversation-items {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.conversation-item {
-  padding: 12px 10px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  font-size: 14px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.conversation-item:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-.conversation-title {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  flex: 1;
-  font-size: 13px;
-}
-
-.delete-conversation-btn {
-  background: transparent;
-  color: rgba(255, 255, 255, 0.5);
-  border: none;
-  width: 24px;
-  height: 24px;
-  border-radius: 4px;
-  font-size: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.2s, background-color 0.2s, color 0.2s;
-}
-
-.conversation-item:hover .delete-conversation-btn {
-  opacity: 1;
-}
-
-.delete-conversation-btn:hover {
-  background-color: rgba(255, 0, 0, 0.2);
-  color: rgba(255, 255, 255, 0.9);
-}
-
-.no-conversations {
-  color: rgba(255, 255, 255, 0.6);
-  padding: 12px 10px;
-  text-align: center;
-  font-size: 14px;
-}
-
-.sidebar-footer {
-  padding: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.user-profile {
-  display: flex;
-  align-items: center;
-}
-
-.user-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background-color: #8e44ad;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-  font-size: 12px;
+  padding: 1rem;
 }
 
 .loading-spinner {
   display: flex;
   justify-content: center;
-  padding: 20px;
-  color: rgba(255, 255, 255, 0.6);
+  align-items: center;
+  height: 100px;
+  color: #64748b;
+}
+
+.conversation-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.conversation-item {
+  padding: 0.75rem;
+  border-radius: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  background-color: #334155;
+  color: #e2e8f0;
+}
+
+.conversation-item:hover {
+  background-color: #475569;
+}
+
+.conversation-title {
+  flex: 1;
+  font-size: 0.875rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.delete-conversation-btn {
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  font-size: 1.25rem;
+  line-height: 1;
+  padding: 0;
+  margin-left: 0.5rem;
+  opacity: 0.5;
+  transition: opacity 0.2s;
+}
+
+.delete-conversation-btn:hover {
+  opacity: 1;
+  color: #ef4444;
+}
+
+.no-conversations {
+  text-align: center;
+  color: #94a3b8;
+  padding: 1rem 0;
+}
+
+.sidebar-footer {
+  padding: 1rem;
+  border-top: 1px solid #334155;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem;
+  background-color: #334155;
+  border-radius: 6px;
+  color: #e2e8f0;
+}
+
+.username {
+  font-weight: 500;
+  color: #e2e8f0;
+}
+
+.logout-btn {
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  font-size: 0.875rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.logout-btn:hover {
+  background-color: #e2e8f0;
+  color: #ef4444;
 }
 
 /* Media queries for responsive design */

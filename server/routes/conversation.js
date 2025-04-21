@@ -2,10 +2,10 @@ const express = require('express');
 const router = express.Router();
 const Conversation = require('../models/Conversation');
 
-// Get all conversations
+// Get all conversations for the current user
 router.get('/', async (req, res) => {
   try {
-    const conversations = await Conversation.find()
+    const conversations = await Conversation.find({ user: req.session.userId })
       .sort({ updatedAt: -1 })
       .select('title createdAt updatedAt metadata');
     
@@ -19,7 +19,10 @@ router.get('/', async (req, res) => {
 // Get a specific conversation
 router.get('/:id', async (req, res) => {
   try {
-    const conversation = await Conversation.findById(req.params.id);
+    const conversation = await Conversation.findOne({ 
+      _id: req.params.id,
+      user: req.session.userId 
+    });
     
     if (!conversation) {
       return res.status(404).json({ message: 'Conversation not found' });
@@ -39,7 +42,8 @@ router.post('/', async (req, res) => {
     
     const newConversation = new Conversation({
       title: title || 'New Conversation',
-      metadata
+      metadata,
+      user: req.session.userId
     });
     
     const savedConversation = await newConversation.save();
@@ -59,7 +63,10 @@ router.post('/:id/messages', async (req, res) => {
       return res.status(400).json({ message: 'Role and content are required' });
     }
     
-    const conversation = await Conversation.findById(req.params.id);
+    const conversation = await Conversation.findOne({ 
+      _id: req.params.id,
+      user: req.session.userId 
+    });
     
     if (!conversation) {
       return res.status(404).json({ message: 'Conversation not found' });
@@ -85,7 +92,10 @@ router.put('/:id/messages/:messageIndex', async (req, res) => {
       return res.status(400).json({ message: 'Content is required' });
     }
     
-    const conversation = await Conversation.findById(id);
+    const conversation = await Conversation.findOne({ 
+      _id: id,
+      user: req.session.userId 
+    });
     
     if (!conversation) {
       return res.status(404).json({ message: 'Conversation not found' });
@@ -122,7 +132,10 @@ router.post('/:id/fork/:messageIndex', async (req, res) => {
     const { id, messageIndex } = req.params;
     const messageIdx = parseInt(messageIndex);
     
-    const conversation = await Conversation.findById(id);
+    const conversation = await Conversation.findOne({ 
+      _id: id,
+      user: req.session.userId 
+    });
     
     if (!conversation) {
       return res.status(404).json({ message: 'Conversation not found' });
@@ -174,7 +187,8 @@ router.post('/:id/fork/:messageIndex', async (req, res) => {
       title: forkedTitle,
       context: conversation.context,
       messages: conversation.messages.slice(0, messageIdx + 1),
-      metadata: metadataCopy
+      metadata: metadataCopy,
+      user: req.session.userId
     });
     
     const savedFork = await forkedConversation.save();
@@ -192,26 +206,20 @@ router.put('/:id', async (req, res) => {
     const { title, metadata } = req.body;
     const { id } = req.params;
     
-    const conversation = await Conversation.findById(id);
+    const conversation = await Conversation.findOne({ 
+      _id: id,
+      user: req.session.userId 
+    });
     
     if (!conversation) {
       return res.status(404).json({ message: 'Conversation not found' });
     }
     
-    // Update conversation properties
     if (title) conversation.title = title;
+    if (metadata) conversation.metadata = metadata;
     
-    // Handle metadata update with deep copy to avoid reference issues
-    if (metadata) {
-      // Create a new metadata object by deep copying the existing one
-      // and then merging the new metadata
-      const existingMetadata = JSON.parse(JSON.stringify(conversation.metadata));
-      conversation.metadata = { ...existingMetadata, ...metadata };
-    }
-    
-    const updatedConversation = await conversation.save();
-    
-    res.json(updatedConversation);
+    await conversation.save();
+    res.json(conversation);
   } catch (error) {
     console.error('Error updating conversation:', error);
     res.status(500).json({ message: 'Error updating conversation', error: error.message });
@@ -223,9 +231,12 @@ router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     
-    const result = await Conversation.findByIdAndDelete(id);
+    const conversation = await Conversation.findOneAndDelete({ 
+      _id: id,
+      user: req.session.userId 
+    });
     
-    if (!result) {
+    if (!conversation) {
       return res.status(404).json({ message: 'Conversation not found' });
     }
     

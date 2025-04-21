@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import '../styles/Sidebar.css';
 
-const Sidebar = ({ isOpen, toggleSidebar }) => {
+const Sidebar = () => {
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { currentUser, logout } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -50,8 +52,17 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/login');
+    } catch (error) {
+      console.error('Error logging out:', error);
+    }
+  };
+
   return (
-    <div className={`sidebar ${isOpen ? 'open' : 'closed'}`}>
+    <div className="sidebar open">
       <div className="sidebar-header">
         <div className="logo">
           <span>PromptEd</span>
@@ -90,6 +101,16 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       </div>
 
       <div className="sidebar-footer">
+        {currentUser && (
+          <div className="user-info">
+            <div className="username">
+              <span>{currentUser.username}</span>
+            </div>
+            <button className="logout-btn" onClick={handleLogout}>
+              Logout
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

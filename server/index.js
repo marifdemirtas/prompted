@@ -5,6 +5,8 @@ const dotenv = require('dotenv');
 const morgan = require('morgan');
 const helmet = require('helmet');
 const path = require('path');
+const session = require('express-session');
+const MongoStore = require('connect-mongo');
 
 // Load environment variables
 dotenv.config();
@@ -13,24 +15,56 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 8000;
 
-// Middleware
-app.use(express.json());
-app.use(cors());
-app.use(helmet());
-app.use(morgan('dev'));
-
-// Import routes
-const conversationRoutes = require('./routes/conversation');
-const llmRoutes = require('./routes/llm');
-
-// Mount routes
-app.use('/api/conversations', conversationRoutes);
-app.use('/api/llm', llmRoutes);
-
 // MongoDB connection
 mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/prompted')
   .then(() => console.log('MongoDB connected'))
   .catch(err => console.error('MongoDB connection error:', err));
+
+// Configure middleware
+app.use(express.json());
+app.use(cors({
+  origin: process.env.CLIENT_URL || 'http://localhost:3000',
+  credentials: true
+}));
+app.use(helmet({
+  contentSecurityPolicy: false // Disable for development
+}));
+app.use(morgan('dev'));
+
+// Configure session middleware
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'prompted-session-secret',
+  resave: false,
+  saveUninitialized: false,
+  store: MongoStore.create({ 
+    mongoUrl: process.env.MONGO_URI || 'mongodb://localhost:27017/prompted',
+    collectionName: 'sessions'
+  }),
+  cookie: {
+    httpOnly: true,
+    maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
+    sameSite: 'lax', // Use 'lax' for development
+    secure: false, // Set to false for development so it works over HTTP
+    path: '/'
+  }
+}));
+
+// Import routes
+const conversationRoutes = require('./routes/conversation');
+const llmRoutes = require('./routes/llm');
+const userRoutes = require('./routes/user');
+const authRoutes = require('./routes/auth');
+
+// Import middleware
+const { requireAuth } = require('./middleware/auth');
+
+// Mount routes - auth routes are public
+app.use('/api/auth', authRoutes);
+
+// All other routes require authentication
+app.use('/api/users', requireAuth, userRoutes);
+app.use('/api/conversations', requireAuth, conversationRoutes);
+app.use('/api/llm', requireAuth, llmRoutes);
 
 // Serve static assets in production
 if (process.env.NODE_ENV === 'production') {
