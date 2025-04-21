@@ -82,7 +82,26 @@ cd ..
 
 Make sure your MongoDB server is running locally. If you're using MongoDB Atlas, this step is not needed.
 
-## Step 5: Run the Application
+## Step 5: Run the Application (Deployment and Prompting)
+
+Make sure the client app is built:
+
+```bash
+cd client
+npm run build
+```
+
+From the root directory, run:
+
+```bash
+cd server
+npm start
+```
+
+- The app will run on http://localhost:8000.
+
+
+## Step 5: Run the Application (Frontend Development)
 
 From the root directory, run:
 

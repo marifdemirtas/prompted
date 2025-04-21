@@ -48,6 +48,20 @@ This will create the following default users:
 
 ## Running the Application
 
+#### For Deployment and Prompting
+1. Start the server application:
+```
+cd client
+npm run build
+
+cd ..
+cd server
+npm start
+```
+
+The application will be available at http://localhost:8000.
+
+#### For Frontend Development
 1. Start the development servers:
 ```
 npm run dev
@@ -58,6 +72,7 @@ This will start both the client (React) and server (Express) applications.
 2. The application will be available at:
    - Frontend: http://localhost:3000
    - Backend API: http://localhost:8000
+
 
 ## User Management
 
