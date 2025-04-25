@@ -33,10 +33,10 @@ class GeminiService extends LLMServiceInterface {
    * Generate system prompt based on tutor mode
    * @returns {string} - The system prompt
    */
-  generateSystemPrompt() {
+  generateSystemPromptForMode(mode) {
     const basePrompt = `You are a tutor specializing in introductory computer science, helping computer science freshman with their programming learning.`;
     
-    switch (this.tutorMode) {
+    switch (mode) {
       case 'direct':
         return `${basePrompt}
         
@@ -63,10 +63,43 @@ AI Tutor Answer: "A variable is a container for storing data values. Think of it
 
 `;
 
-      case 'scaffolding':
+      case 'scaffolding-think':
         return `${basePrompt}
         
-Start with the token "COGNITIVE SCF". When responding to the student, provide cognitive scaffolding to help them solve problems themselves. Break problems into steps, provide hints rather than answers, and gradually build their understanding. Focus on guiding their learning process rather than giving solutions.`;
+Your task is to think through a programming problem step-by-step as a student should, but do NOT solve it or write code. Instead, generate a clear and structured analysis of the problem, including:
+- A description of what the problem is asking
+- Identification of the input and output
+- The type of problem (e.g. search, string manipulation, math)
+- Any constraints or edge cases to watch out for
+- A rough high-level plan for how one might approach solving it (no code)
+
+Do not provide any actual code or solution.
+
+Example output:
+---
+**Problem Understanding**: This problem is asking whether a given string is a palindrome.
+**Input**: A string (e.g., "racecar")
+**Output**: A boolean (True if the string is a palindrome, False otherwise)
+**Problem Type**: String processing and comparison
+
+**Edge Cases**:
+- Empty strings
+- Strings with punctuation or spaces
+- Case sensitivity (e.g., "RaceCar" vs "racecar")
+
+**High-Level Plan**:
+1. Normalize the string (e.g., lowercase, remove non-alphabet characters)
+2. Reverse the string
+3. Compare the original and reversed strings
+---
+
+`;
+
+      case 'scaffolding-explain':
+        return `You are a list-to-paragraph translator. Your task is to read a structured list or bullet-point plan and rewrite it into a coherent paragraph that explains the underlying idea or approach in a way that's understandable to someone who hasn't seen the original list. Focus on clarity, logical flow, and completeness. The output should feel like a well-explained summary or narrative that captures the intention behind the original list.`;
+
+      default:
+        throw new Error(`Unsupported tutor mode: ${mode}`);
     }
   }
   
@@ -87,9 +120,38 @@ Start with the token "COGNITIVE SCF". When responding to the student, provide co
    */
   async generateResponse(promptData) {
     try {
-      const { messages } = promptData;
+        const { messages } = promptData;
+
+        if (this.tutorMode === 'scaffolding') {
+            // Generate responses for both direct and explanation modes
+            const _thinkResponse = await this.generateResponseForMode('scaffolding-think', messages);
+            const thinkMessages = [
+              { role: 'user', content: _thinkResponse } // Add the "think" response as input
+            ];
+            const thinkResponse = await this.generateResponseForMode('scaffolding-explain', thinkMessages);
+            const explanationMessages = [
+              ...messages, // Include the original conversation history
+              { role: 'user', content: "Based on the student's analysis: " + _thinkResponse + "Provide step-by-step guidance to help the student transform this plan into a functional solution." }
+            ];
+            const explanationResponse = await this.generateResponseForMode('explanation', explanationMessages);
+
+            // Combine responses
+            return `COGNITIVE SCF\n\n\n ${thinkResponse}\n\n\n${explanationResponse}`;
+        } else {
+            // Default behavior for other modes
+            return await this.generateResponseForMode(this.tutorMode, messages);
+        }
+    } catch (error) {
+        console.error('Error generating LLM response:', error);
+        throw error;
+    }
+  }
+
+
+  async generateResponseForMode(mode, messages) {
+    try {
       
-      const systemPrompt = this.generateSystemPrompt();
+      const systemPrompt = this.generateSystemPromptForMode(mode);
       
       // Initialize conversation with system prompt
       const geminiMessages = [
