@@ -11,7 +11,9 @@ const ChatPage = () => {
   const location = useLocation();
   const isReplayMode = location.pathname.includes('/replay/');
   
-  const [messages, setMessages] = useState([]);
+  const defaultGreeting = { role: 'system', content: 'Hi there! I\'m your AI tutor—I\'m here to help you learn computer science today, so feel free to ask questions or jump right into a problem when you\'re ready!' };
+
+  const [messages, setMessages] = useState(paramConversationId? [] : [defaultGreeting]);
   const [conversation, setConversation] = useState(null);
   const [conversationId, setConversationId] = useState(paramConversationId || null);
   const [title, setTitle] = useState('');
@@ -66,7 +68,7 @@ const ChatPage = () => {
         const response = await api.getConversation(conversationId);
         
         setConversation(response.data);
-        setMessages(response.data.messages || []);
+        setMessages(response.data.messages || [defaultGreeting]);
         setTitle(response.data.title || 'Conversation');
         
         // Handle backward compatibility with old tutor mode format
@@ -93,7 +95,7 @@ const ChatPage = () => {
         api.getConversation(lastConversationId)
           .then(response => {
             setConversationId(lastConversationId);
-            setMessages(response.data.messages);
+            setMessages(response.data.messages || [defaultGreeting]);
             if (response.data.metadata && response.data.metadata.llmService) {
               // Only set if the service is allowed for this user
               if (currentUser && currentUser.allowedServices.includes(response.data.metadata.llmService)) {
@@ -108,7 +110,7 @@ const ChatPage = () => {
           });
       } else {
         // No previous conversation, clear chat state
-        setMessages([]);
+        setMessages([defaultGreeting]);
         setConversation(null);
         setEditingMessageIndex(null);
         setError(null);

@@ -34,19 +34,35 @@ class GeminiService extends LLMServiceInterface {
    * @returns {string} - The system prompt
    */
   generateSystemPrompt() {
-    const basePrompt = `You are an AI tutor specializing in computer science education.`;
+    const basePrompt = `You are a tutor specializing in introductory computer science, helping computer science freshman with their programming learning.`;
     
     switch (this.tutorMode) {
       case 'direct':
         return `${basePrompt}
         
-Start with the token "DIRECT ANSWER". When responding to the student, provide direct answers to their questions without additional explanation or scaffolding. Be concise and precise, focusing only on the exact information requested.`;
+Start with the token "DIRECT ANSWER".
+
+Your goal is to provide clear, direct answers without additional context or explanation unless specifically asked.
+
+Example Interaction:
+Student Question: "How do I print text in Python?"
+AI Tutor: "print("Your text here")"
+
+`;
         
       case 'explanation':
         return `${basePrompt}
         
-Start with the token "DIRECT EXPLANATION". When responding to the student, provide clear explanations that break down concepts. Include examples where helpful, but don't use Socratic questioning. Teach the material directly with comprehensive explanations.`;
-                
+Start with the token "DIRECT EXPLANATION".
+
+When answering questions, first clearly state the answer, then provide a brief, easy-to-follow explanation of the underlying concept or logic. Limit the explanation to 1 minute read, if the explanation is too long, ask the student if they want to continue.
+
+Example Interaction:
+Student Question: "What is a variable in programming?"
+AI Tutor Answer: "A variable is a container for storing data values. Think of it like labeling a box to store items. In programming, variables store values such as numbers or strings, allowing us to reuse them easily."
+
+`;
+
       case 'scaffolding':
         return `${basePrompt}
         
