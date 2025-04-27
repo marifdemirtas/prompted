@@ -24,10 +24,9 @@ def generate_unique_phrase(existing):
 
 def assign_random_services():
     """Assigns random services to a user."""
-    # Randomly decide how many services to assign (1-3)
-    num_services = random.randint(1, len(LLM_SERVICES))
+    num_services = 1
     # Randomly select services
-    services = random.sample(LLM_SERVICES, num_services)
+    services = random.sample(LLM_SERVICES, 1)
     # Randomly select a default service from the assigned services
     default_service = random.choice(services)
     return services, default_service

@@ -308,36 +308,15 @@ const ChatPage = () => {
   
   return (
     <div className={isReplayMode ? "replay-page" : "chat-page"}>
-      <div className="top-bar">
-        <div className="llm-service-dropdown" ref={dropdownRef}>
-          <button 
-            className="llm-service-btn" 
-            onClick={() => setIsLLMDropdownOpen(!isLLMDropdownOpen)}
-          >
-            {currentService.label} <span className="plus-icon">+</span>
-          </button>
-          
-          {isLLMDropdownOpen && (
-            <div className="llm-dropdown-menu">
-              {llmServices.map(service => (
-                <div 
-                  key={service.id}
-                  className={`llm-dropdown-item ${service.id === llmService ? 'selected' : ''}`}
-                  onClick={() => handleLLMServiceChange(service.id)}
-                >
-                  {service.label}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-        
-        {isReplayMode && editingMessageIndex !== null && (
+
+      {isReplayMode && editingMessageIndex !== null && (
+        <div className="top-bar">
           <div className="fork-mode-indicator">
             Fork Mode: Creating a new conversation branch
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
       
       <div className={isReplayMode ? "replay-container" : "chat-container"}>
         
