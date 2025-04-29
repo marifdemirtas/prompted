@@ -27,6 +27,15 @@ class GeminiService extends LLMServiceInterface {
     super();
     this.tutorMode = tutorMode;
     this.model_string = process.env.GEMINI_MODEL || 'gemini-2.0-flash-lite';
+    this.stage = 0; // only used if tutorMode is 'scaffolding'
+    this.stages = [
+      'sensemaking',
+      'representation',
+      'planning',
+      'execution',
+      'monitoring',
+      'reflection'
+    ];
   }
   
   /**
@@ -36,69 +45,72 @@ class GeminiService extends LLMServiceInterface {
   generateSystemPromptForMode(mode) {
     const basePrompt = `You are a tutor specializing in introductory computer science, helping computer science freshman with their programming learning.`;
     
-    switch (mode) {
-      case 'direct':
-        return `${basePrompt}
-        
-Start with the token "DIRECT ANSWER".
+    const prompts = {
+      'sensemaking': `Start with the token "SENSEMAKING".
+  ${basePrompt} Help the student restate the problem in their own words and uncover any unclear parts. After each reply, decide if the student truly grasped the core task and noted at least one ambiguity.
+IMPORTANT: For every message you output, at the very end of your reply, always emit exactly one of these two lines (and nothing else after it):
+@Evaluation: PASS
+@Evaluation: FAIL
+Do not omit or rephrase this line under any circumstances. First evaluation you give is always FAIL.
+  `,
 
-Your goal is to provide clear, direct answers without additional context or explanation unless specifically asked.
+      'representation': `Start with the token "REPRESENTATION".
+  ${basePrompt} Guide the student to identify each input (with its data type), the expected output type, and the core operations needed. After every reply, check for completeness and accuracy.
+IMPORTANT: For every message you output, at the very end of your reply, always emit exactly one of these two lines (and nothing else after it):
+@Evaluation: PASS
+@Evaluation: FAIL
+Do not omit or rephrase this line under any circumstances. First evaluation you give is always FAIL.
+  `,
 
+      'planning': `Start with the token "PLANNING".
+  ${basePrompt} Ask the student to propose at least one distinct high-level solution strategy, with a concise name, a one-sentence description, and one benefit and one drawback. After each response, verify they've provided clear approaches.
+IMPORTANT: For every message you output, at the very end of your reply, always emit exactly one of these two lines (and nothing else after it):
+@Evaluation: PASS
+@Evaluation: FAIL
+Do not omit or rephrase this line under any circumstances. First evaluation you give is always FAIL.
+  `,
+
+      'execution': `Start with the token "EXECUTION".
+  ${basePrompt} Have them pick one strategy and walk you step-by-step through how it transforms a sample input into the correct output. After each walkthrough, confirm that every transformation is clearly explained.
+IMPORTANT: For every message you output, at the very end of your reply, always emit exactly one of these two lines (and nothing else after it):
+@Evaluation: PASS
+@Evaluation: FAIL
+Do not omit or rephrase this line under any circumstances. First evaluation you give is always FAIL.
+  `,
+
+      'monitoring': `Start with the token "MONITORING".
+  ${basePrompt} Ask the student to compare their expected result to the actual output, pinpoint exactly where they diverged, and hypothesize why. After each explanation, decide if they correctly diagnosed the discrepancy.
+IMPORTANT: For every message you output, at the very end of your reply, always emit exactly one of these two lines (and nothing else after it):
+@Evaluation: PASS
+@Evaluation: FAIL
+Do not omit or rephrase this line under any circumstances. First evaluation you give is always FAIL.
+  `,
+
+      'reflection': `Start with the token "REFLECTION".
+  ${basePrompt} Prompt the student to share their key insight, suggest how they would refine their approach next time, and name any remaining uncertainties, then weave their answers into a concise summary.
+IMPORTANT: For every message you output, at the very end of your reply, always emit exactly one of these two lines (and nothing else after it):
+@Evaluation: PASS
+@Evaluation: FAIL
+Do not omit or rephrase this line under any circumstances. First evaluation you give is always FAIL.
+  `,
+      'direct': `Start with the token "DIRECT ANSWER".
+  ${basePrompt} Your goal is to provide clear, direct answers without additional context or explanation unless specifically asked.
 Example Interaction:
 Student Question: "How do I print text in Python?"
 AI Tutor: "print("Your text here")"
 
-`;
-        
-      case 'explanation':
-        return `${basePrompt}
-        
-Start with the token "DIRECT EXPLANATION".
-
-When answering questions, first clearly state the answer, then provide a brief, easy-to-follow explanation of the underlying concept or logic. Limit the explanation to 1 minute read, if the explanation is too long, ask the student if they want to continue.
-
+`,
+      'explanation': `Start with the token "DIRECT EXPLANATION".
+  ${basePrompt} When answering questions, first clearly state the answer, then provide a brief, easy-to-follow explanation of the underlying concept or logic. Limit the explanation to 1 minute read, if the explanation is too long, ask the student if they want to continue.
 Example Interaction:
 Student Question: "What is a variable in programming?"
 AI Tutor Answer: "A variable is a container for storing data values. Think of it like labeling a box to store items. In programming, variables store values such as numbers or strings, allowing us to reuse them easily."
+`
+    };
 
-`;
-
-      case 'scaffolding-think':
-        return `${basePrompt}
-        
-Your task is to think through a programming problem step-by-step as a student should, but do NOT solve it or write code. Instead, generate a clear and structured analysis of the problem, including:
-- A description of what the problem is asking
-- Identification of the input and output
-- The type of problem (e.g. search, string manipulation, math)
-- Any constraints or edge cases to watch out for
-- A rough high-level plan for how one might approach solving it (no code)
-
-Do not provide any actual code or solution.
-
-Example output:
----
-**Problem Understanding**: This problem is asking whether a given string is a palindrome.
-**Input**: A string (e.g., "racecar")
-**Output**: A boolean (True if the string is a palindrome, False otherwise)
-**Problem Type**: String processing and comparison
-
-**Edge Cases**:
-- Empty strings
-- Strings with punctuation or spaces
-- Case sensitivity (e.g., "RaceCar" vs "racecar")
-
-**High-Level Plan**:
-1. Normalize the string (e.g., lowercase, remove non-alphabet characters)
-2. Reverse the string
-3. Compare the original and reversed strings
----
-
-`;
-
-      case 'scaffolding-explain':
-        return `You are a list-to-paragraph translator. Your task is to read a structured list or bullet-point plan and rewrite it into a coherent paragraph that explains the underlying idea or approach in a way that's understandable to someone who hasn't seen the original list. Focus on clarity, logical flow, and completeness. The output should feel like a well-explained summary or narrative that captures the intention behind the original list.`;
-
-      default:
+    if (prompts[mode]) {
+      return prompts[mode];
+    } else {
         throw new Error(`Unsupported tutor mode: ${mode}`);
     }
   }
@@ -123,23 +135,25 @@ Example output:
         const { messages } = promptData;
 
         if (this.tutorMode === 'scaffolding') {
-            // Generate responses for both direct and explanation modes
-            const _thinkResponse = await this.generateResponseForMode('scaffolding-think', messages);
-            const thinkMessages = [
-              { role: 'user', content: _thinkResponse } // Add the "think" response as input
-            ];
-            const thinkResponse = await this.generateResponseForMode('scaffolding-explain', thinkMessages);
-            const explanationMessages = [
-              ...messages, // Include the original conversation history
-              { role: 'user', content: "Based on the student's analysis: " + _thinkResponse + "Provide step-by-step guidance to help the student transform this plan into a functional solution." }
-            ];
-            const explanationResponse = await this.generateResponseForMode('explanation', explanationMessages);
+            const mode = this.stages[this.stage] || this.stages[0];
+            console.log(`Current mode: ${mode}`);
 
-            // Combine responses
-            return `COGNITIVE SCF\n\n\n ${thinkResponse}\n\n\n${explanationResponse}`;
+            // Get the response and evaluation
+            const { responseText, evaluation } = await this.generateResponseForMode(mode, messages);
+
+            // Determine if the stage is passed
+            const passed = evaluation === 'PASS';
+
+            console.log(`Passed: ${passed}, Current stage: ${this.stage + 1}, Total stages: ${this.stages.length}`);
+            if (passed && this.stage < this.stages.length - 1) {
+                this.stage++;
+            }
+
+            return responseText;
         } else {
             // Default behavior for other modes
-            return await this.generateResponseForMode(this.tutorMode, messages);
+            const { responseText, evaluation } = await this.generateResponseForMode(this.tutorMode, messages);
+            return responseText;
         }
     } catch (error) {
         console.error('Error generating LLM response:', error);
@@ -183,7 +197,13 @@ Example output:
       const lastMessage = geminiMessages[geminiMessages.length - 1];
       const result = await chat.sendMessage(lastMessage.parts[0].text);
       
-      return result.response.text();
+      const responseText = result.response.text();
+
+      // Extract evaluation message
+      const evaluationMatch = responseText.match(/@Evaluation: (PASS|FAIL)/);
+      const evaluation = evaluationMatch ? evaluationMatch[1] : null;
+
+      return { responseText, evaluation };
     } catch (error) {
       console.error('Error generating LLM response:', error);
       throw error;
@@ -217,21 +237,55 @@ Example output:
  * @param {string} serviceId - The ID of the service to use
  * @returns {LLMServiceInterface} - An instance of the appropriate LLM service
  */
-function getLLMService(serviceId) {
+function getLLMService(req, serviceId, conversationId) {
   // If no serviceId provided, return null to let the caller handle the default
   if (!serviceId) {
-    return null;
+    throw new Error('No LLM service ID provided');
+  }
+
+  // Check if the service instance already exists for the conversation
+  if (req.session.llmServices && req.session.llmServices[conversationId]) {
+    let instance = req.session.llmServices[conversationId].instance;
+
+    // Rehydrate the instance if it has lost its prototype
+    if (!(instance instanceof LLMServiceInterface)) {
+      console.log('Rehydrating LLM Service instance from session...');
+      const { tutorMode, model_string, stage, stages } = instance;
+      instance = new GeminiService(tutorMode);
+      instance.model_string = model_string;
+      instance.stage = stage;
+      instance.stages = stages;
+
+      // Update the session with the rehydrated instance
+      req.session.llmServices[conversationId].instance = instance;
+    }
+
+    return instance;
   }
   
   // Parse the service ID to get the provider and mode
   const [provider, mode] = serviceId.split('-');
+  let serviceInstance;
   
   if (provider === 'gemini') {
-    return new GeminiService(mode);
+    serviceInstance = new GeminiService(mode);
+  } else {
+    serviceInstance = new GeminiService('direct'); // Default to direct mode if provider is not recognized
   }
+
+  // Initialize the session object if it doesn't exist
+  if (!req.session.llmServices) {
+    req.session.llmServices = {};
+  }
+
+  // Store the service instance for the conversation
+  req.session.llmServices[conversationId] = {
+    serviceId,
+    instance: serviceInstance,
+  };
   
-  // Default to Gemini with direct answer mode if provider is not recognized
-  return new GeminiService('direct');
+  // console.log('Created LLM Service instance:', serviceInstance);
+  return serviceInstance;
 }
 
 /**
@@ -241,15 +295,12 @@ function getLLMService(serviceId) {
  * @param {string} promptData.serviceId - ID of the LLM service to use
  * @returns {Promise<string>} - The LLM response
  */
-async function generateLLMResponse(promptData) {
+async function generateLLMResponse(req, promptData) {
   try {
-    const { serviceId } = promptData;
-    const service = getLLMService(serviceId);
-    
-    if (!service) {
-      throw new Error('No LLM service ID provided');
-    }
-    
+    const { conversationId, serviceId } = promptData;
+    const service = getLLMService(req, serviceId, conversationId);
+    // console.log('Stored LLM Service in session:', req.session.llmServices[conversationId]);
+
     return await service.generateResponse(promptData);
   } catch (error) {
     console.error('Error generating LLM response:', error);
@@ -263,14 +314,9 @@ async function generateLLMResponse(promptData) {
  * @param {string} serviceId - ID of the LLM service to use
  * @returns {Promise<string>} - Generated title
  */
-async function generateConversationTitle(message, serviceId) {
+async function generateConversationTitle(req, message, serviceId) {
   try {
-    const service = getLLMService(serviceId);
-    
-    if (!service) {
-      // Fallback to truncated message if no service is provided
-      return message.length > 30 ? message.substring(0, 30) + '...' : message;
-    }
+    const service = getLLMService(req, serviceId);
     
     return await service.generateTitle(message);
   } catch (error) {

@@ -121,10 +121,11 @@ router.post('/chat', async (req, res) => {
         content: msg.content
       })),
       // Use conversation's stored service
-      serviceId: conversation.metadata.llmService
+      serviceId: conversation.metadata.llmService,
+      conversationId: conversation._id.toString()
     };
     
-    const llmResponse = await generateLLMResponse(promptData);
+    const llmResponse = await generateLLMResponse(req, promptData);
     
     // Add assistant response to conversation
     conversation.messages.push({
@@ -219,10 +220,11 @@ router.post('/continue', async (req, res) => {
         role: msg.role,
         content: msg.content
       })),
-      serviceId: selectedServiceId
+      serviceId: selectedServiceId,
+      conversationId: conversation._id.toString()
     };
     
-    const llmResponse = await generateLLMResponse(promptData);
+    const llmResponse = await generateLLMResponse(req, promptData);
     
     // Add assistant response to conversation
     conversation.messages.push({
@@ -320,10 +322,11 @@ router.post('/edit', async (req, res) => {
         role: msg.role,
         content: msg.content
       })),
-      serviceId: selectedServiceId
+      serviceId: selectedServiceId,
+      conversationId: conversation._id.toString()
     };
     
-    const llmResponse = await generateLLMResponse(promptData);
+    const llmResponse = await generateLLMResponse(req, promptData);
     
     // Add assistant response to conversation
     conversation.messages.push({

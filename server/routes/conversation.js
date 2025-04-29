@@ -216,6 +216,10 @@ router.delete('/:id', async (req, res) => {
     if (!conversation) {
       return res.status(404).json({ message: 'Conversation not found' });
     }
+
+    if (req.session.llmServices && req.session.llmServices[conversation._id]) {
+      delete req.session.llmServices[conversation._id];
+    }
     
     res.json({ message: 'Conversation deleted successfully' });
   } catch (error) {
