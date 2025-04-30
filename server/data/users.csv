@@ -49,3 +49,6 @@ DeltaTiger,gemini-explanation,gemini-explanation
 VioletViolet,gemini-direct,gemini-direct
 ZebraYellow,gemini-explanation,gemini-explanation
 HappyViolet,gemini-direct,gemini-direct
+OpenAIDirect,openai-direct,openai-direct
+OpenAIExplanation,openai-explanation,openai-explanation
+OpenAIScaffolding,openai-scaffolding,openai-scaffolding

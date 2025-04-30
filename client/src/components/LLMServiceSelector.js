@@ -41,6 +41,21 @@ const LLMServiceSelector = ({
       id: 'gemini-scaffolding',
       label: 'Omega',
       description: 'Omega Tutor breaks problems into steps and provides hints rather than answers.'
+    },
+    {
+      id: 'openai-direct',
+      label: 'OpenAI Direct',
+      description: 'OpenAI Direct provides concise, direct answers without explanation.'
+    },
+    {
+      id: 'openai-explanation',
+      label: 'OpenAI Explanatory',
+      description: 'OpenAI Explanatory provides detailed explanations with examples.'
+    },
+    {
+      id: 'openai-scaffolding',
+      label: 'OpenAI Scaffolding',
+      description: 'OpenAI Scaffolding breaks problems into steps with guided hints.'
     }
   ];
   
