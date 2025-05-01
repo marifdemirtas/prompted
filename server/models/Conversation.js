@@ -6,6 +6,10 @@ const MessageSchema = new mongoose.Schema({
     enum: ['student', 'assistant'],
     required: true
   },
+  tutorStage: {
+    type: String,
+    required: false
+  },
   content: {
     type: String,
     required: true
@@ -67,8 +71,8 @@ ConversationSchema.pre('save', function(next) {
 });
 
 // Method to add a message to conversation
-ConversationSchema.methods.addMessage = function(role, content) {
-  this.messages.push({ role, content });
+ConversationSchema.methods.addMessage = function(role, tutorStage, content) {
+  this.messages.push({ role, tutorStage, content });
   return this.save();
 };
 
@@ -76,36 +80,36 @@ ConversationSchema.methods.addMessage = function(role, content) {
 ConversationSchema.methods.editMessage = function(messageId, newContent) {
   const message = this.messages.id(messageId);
   if (!message) return null;
-  
+
   if (!message.edited) {
     message.originalContent = message.content;
     message.edited = true;
   }
-  
+
   message.content = newContent;
   message.timestamp = Date.now();
-  
+
   return this.save();
 };
 
 // Method to get conversation fork from specific message
 ConversationSchema.methods.forkFromMessage = function(messageIndex) {
   if (messageIndex < 0 || messageIndex >= this.messages.length) return null;
-  
+
   // Determine the title for the forked conversation
   let forkedTitle;
-  const serviceInfo = this.metadata.llmService || 
+  const serviceInfo = this.metadata.llmService ||
       `gemini-${this.metadata.tutorMode || 'direct'}`;
-  
+
   // Format service name for display
-  const serviceFormatted = serviceInfo.split('-').map(word => 
+  const serviceFormatted = serviceInfo.split('-').map(word =>
     word.charAt(0).toUpperCase() + word.slice(1)
   ).join(' ');
-  
+
   // Check if the title already has a service prefix
   const titleRegex = /^\[([\w\s]+)\]\s(.+)$/;
   const titleMatch = this.title.match(titleRegex);
-  
+
   if (titleMatch) {
     // Keep the service name from the original title
     const contentPart = ""; // titleMatch[2];
@@ -126,18 +130,18 @@ ConversationSchema.methods.forkFromMessage = function(messageIndex) {
       : baseContent;
     forkedTitle = prefix + truncatedContent;
   }
-  
+
   // Create a deep copy of the metadata object
   const metadataCopy = JSON.parse(JSON.stringify(this.metadata));
-  
+
   const forkedConversation = {
     title: forkedTitle,
     messages: this.messages.slice(0, messageIndex + 1),
     metadata: metadataCopy,
     user: this.user // Preserve the user reference in the fork
   };
-  
+
   return this.model('Conversation').create(forkedConversation);
 };
 
-module.exports = mongoose.model('Conversation', ConversationSchema); 
+module.exports = mongoose.model('Conversation', ConversationSchema);

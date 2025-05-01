@@ -57,14 +57,14 @@ class LLMServiceInterface {
 
             // Generate response for the next mode
             const { responseText: nextResponseText } = await this.generateResponseForMode(nextMode, messages);
-            return nextResponseText; // Overwrite and return the response from the next mode
+            return { llmResponse: nextResponseText, tutorStage: this.stages[this.stage] };
         }
 
-        return responseText;
+        return { llmResponse: responseText, tutorStage: this.stages[this.stage] };
       } else {
         // Default behavior for other modes
         const { responseText } = await this.generateResponseForMode(this.tutorMode, messages);
-        return responseText;
+        return { llmResponse: responseText, tutorStage: this.tutorMode };
       }
     } catch (error) {
       console.error('Error generating LLM response:', error);
@@ -105,105 +105,104 @@ class GeminiService extends LLMServiceInterface {
 
     const prompts = {
       'sensemaking': `Start your reply with the token "SENSEMAKING".
-    Task:
-    - Ask the student one open-ended question to help them restate the problem in their own words.
-    - After they reply, evaluate:
-    - Did they accurately restate the core goal? (Yes/No)
-    - Did they identify at least one ambiguity or unclear part? (Yes/No)
-    - If they didn't accurately restate the core goal or identify at least one ambiguity or unclear part, ask them one open-ended question to help them identify the core goal or ambiguity or unclear part.
 
-    Rules:
-    - If either answer is No, output \`@Evaluation: FAIL\` and ask a new question focused on the missing part.
-    - If both answers are Yes, output \`@Evaluation: PASS\`.
-    - After @Evaluation: PASS, stop asking further questions and wait for next instruction.
-    **IMPORTANT: Always emit exactly one evaluation line (\`@Evaluation: PASS\` or \`@Evaluation: FAIL\`) at the end of each message. Never omit, reword, or modify it. The first evaluation must always be FAIL.**
+      ${basePrompt}
+
+      Task:
+      - Ask the student one open-ended question to help them restate the problem in their own words.
+      - After they reply, evaluate if they have:
+        - Accurately restated the core goal? (Yes/No)
+        - Identified at least one ambiguity or unclear part? (Yes/No)
+      - If they haven't fully met these criteria, ask one more targeted open-ended question to guide them.
+
+      Rules:
+      - Your first response should always aim to understand the student's initial grasp, so the first evaluation you output at the end of your message MUST be \`@Evaluation: FAIL\`.
+      - Only output \`@Evaluation: PASS\` when the student's response clearly and accurately restates the core goal AND identifies at least one ambiguity.
+      - In all other cases, output \`@Evaluation: FAIL\` and continue to guide the student with another question.
+      - **IMPORTANT: Always end your message with exactly one line containing either \`@Evaluation: PASS\` or \`@Evaluation: FAIL\`. Do not include any other text after this line.**
     `,
 
       'representation': `Start your reply with the token "REPRESENTATION".
 
-    ${basePrompt}
+      ${basePrompt}
 
-    Task:
-    - Ask the student one open-ended question so they identify the following about the problem:
-    1. Each input (with its expected data type)
-    2. The output (with its data type)
-    3. The core operations required (e.g., sorting, counting, filtering)
+      Task:
+      - Ask the student one open-ended question to help them identify:
+        1. Each input (with its expected data type)
+        2. The output (with its data type)
+        3. The core operations required (e.g., sorting, counting, filtering)
+      - After their reply, evaluate if they have clearly and correctly described all three components.
 
-    After they reply, evaluate:
-    - Are all three components (inputs, output, operations) clearly and correctly described? (Yes/No)
-
-    Rules:
-    - If anything is missing or incorrect, output \`@Evaluation: FAIL\` and ask a question specifically targeting the missing piece(s).
-    - If all components are complete and correct, output \`@Evaluation: PASS\`.
-    - After @Evaluation: PASS, stop asking and wait for next instruction.
-
-    IMPORTANT: Always emit exactly one evaluation line (\`@Evaluation: PASS\` or \`@Evaluation: FAIL\`) at the end of each message. Never omit, reword, or modify it. The first evaluation must always be FAIL.
+      Rules:
+      - Your first response should guide them towards identifying these, so your first evaluation MUST be \`@Evaluation: FAIL\`.
+      - Only output \`@Evaluation: PASS\` when all three components (inputs, output, operations) are clearly and correctly described.
+      - If anything is missing or incorrect, output \`@Evaluation: FAIL\` and ask a question specifically targeting the missing or incorrect piece(s).
+      - **IMPORTANT: Always end your message with exactly one line containing either \`@Evaluation: PASS\` or \`@Evaluation: FAIL\`. Do not include any other text after this line.**
     `,
 
       'planning': `Start your reply with the token "PLANNING".
 
-    ${basePrompt}
+      ${basePrompt}
 
-    Task:
-    - Ask the student to propose at least one distinct high-level solution strategy.
-    - Require:
-    1. A short name for the strategy
-    2. A one-sentence description
-    3. One benefit
-    4. One drawback
+      Task:
+      - Ask the student to propose at least one distinct high-level solution strategy, including:
+          1. A function name
+          2. A one sentence summary
+          3. Args and their description
+          4. Returns and their description
+          5. At least two test cases that are different from the examples given in the problem.
+      - After their reply, evaluate if they have provided all five required pieces clearly and distinctly.
 
-    After they reply, evaluate:
-    - Did they clearly provide all four required pieces? (Yes/No)
-
-    Rules:
-    - If any item is missing, unclear, or incomplete, output \`@Evaluation: FAIL\` and guide them to fill the missing piece(s).
-    - If all four are complete and clear, output \`@Evaluation: PASS\`.
-    - After @Evaluation: PASS, stop asking and wait for the next instruction.
-
-    IMPORTANT: Always emit exactly one evaluation line (\`@Evaluation: PASS\` or \`@Evaluation: FAIL\`) at the end of each message. Never omit, reword, or modify it. The first evaluation must always be FAIL.
+      Rules:
+      - Your first response should prompt them to think about strategies, so your first evaluation MUST be \`@Evaluation: FAIL\`.
+      - Only output \`@Evaluation: PASS\` when all four pieces are complete, clear, and distinct for at least one proposed strategy.
+      - If any item is missing, unclear, or incomplete, output \`@Evaluation: FAIL\` and guide them to fill the missing piece(s).
+      - **IMPORTANT: Always end your message with exactly one line containing either \`@Evaluation: PASS\` or \`@Evaluation: FAIL\`. Do not include any other text after this line.**
     `,
 
       'execution': `Start your reply with the token "EXECUTION".
 
-    ${basePrompt}
+      ${basePrompt}
 
-    Task:
-    - Ask the student to select one proposed strategy.
-    - Then, have them walk step-by-step through transforming a **sample input** into the correct output using that strategy.
+      Task:
+      - If the student hasn't already, ask them to select one proposed strategy.
+      - Then, have them walk you step-by-step through how that strategy transforms a **sample input** into the correct output.
+      - After their walkthrough, evaluate if every transformation step is clearly explained and in a logical order.
 
-    After they reply, evaluate:
-    - Did they explain every transformation step clearly and in order? (Yes/No)
-
-    Rules:
-    - If steps are missing, out of order, or unclear, output \`@Evaluation: FAIL\` and prompt them to walk through it more carefully.
-    - If the steps are complete and clear, output \`@Evaluation: PASS\`.
-    - After @Evaluation: PASS, stop asking and wait for next instruction.
-
-    IMPORTANT: Always emit exactly one evaluation line (\`@Evaluation: PASS\` or \`@Evaluation: FAIL\`) at the end of each message. Never omit, reword, or modify it. The first evaluation must always be FAIL.
+      Rules:
+      - Your first response here should likely prompt them to choose a strategy and begin the walkthrough, so your first evaluation MUST be \`@Evaluation: FAIL\`.
+      - Only output \`@Evaluation: PASS\` when the entire transformation from sample input to output is clearly and logically explained step-by-step.
+      - If steps are missing, out of order, or unclear, output \`@Evaluation: FAIL\` and prompt them to clarify.
+      - **IMPORTANT: Always end your message with exactly one line containing either \`@Evaluation: PASS\` or \`@Evaluation: FAIL\`. Do not include any other text after this line.**
     `,
 
       'monitoring': `Start with the token "MONITORING".
-    ${basePrompt} Ask the student to compare their expected result to the actual output, pinpoint exactly where they diverged, and hypothesize why. After each explanation, decide if they correctly diagnosed the discrepancy.
-    IMPORTANT: For every message you output, at the very end of your reply, always emit exactly one of these two lines (and nothing else after it):
-    @Evaluation: PASS
-    @Evaluation: FAIL
-    Do not omit or rephrase this line under any circumstances. First evaluation you give is always FAIL.
+      ${basePrompt} Ask the student to compare their expected result to the actual output (if they have one), pinpoint exactly where they diverged, and hypothesize why. After their explanation, evaluate if they have correctly diagnosed the discrepancy.
+
+      Rules:
+      - Your first response should guide them through this comparison, so your first evaluation MUST be \`@Evaluation: FAIL\`.
+      - Only output \`@Evaluation: PASS\` if the student accurately identifies the divergence and provides a plausible hypothesis for why it occurred.
+      - If their diagnosis is incorrect or incomplete, output \`@Evaluation: FAIL\` and ask guiding questions.
+      - **IMPORTANT: Always end your message with exactly one line containing either \`@Evaluation: PASS\` or \`@Evaluation: FAIL\`. Do not include any other text after this line.**
     `,
 
       'reflection': `Start with the token "REFLECTION".
-    ${basePrompt} Prompt the student to share their key insight, suggest how they would refine their approach next time, and name any remaining uncertainties, then weave their answers into a concise summary.
-    IMPORTANT: For every message you output, at the very end of your reply, always emit exactly one of these two lines (and nothing else after it):
-    @Evaluation: PASS
-    @Evaluation: FAIL
-    Do not omit or rephrase this line under any circumstances. First evaluation you give is always FAIL.
+      ${basePrompt} Prompt the student to share their key insight from the problem-solving process, suggest how they would refine their approach next time, and name any remaining uncertainties. After their response, evaluate if they have provided thoughtful answers to all three parts.
+
+      Rules:
+      - Your first response should prompt them for these reflections, so your first evaluation MUST be \`@Evaluation: FAIL\`.
+      - Only output \`@Evaluation: PASS\` if they provide a meaningful insight, a concrete suggestion for improvement, and identify any lingering uncertainties.
+      - If any of these parts are missing or superficial, output \`@Evaluation: FAIL\` and encourage them to think deeper.
+      - **IMPORTANT: Always end your message with exactly one line containing either \`@Evaluation: PASS\` or \`@Evaluation: FAIL\`. Do not include any other text after this line.**
     `,
+
       'direct': `Start with the token "DIRECT ANSWER".
     ${basePrompt} Your goal is to provide clear, direct answers without additional context or explanation unless specifically asked.
     Example Interaction:
     Student Question: "How do I print text in Python?"
     AI Tutor: "print("Your text here")"
-
     `,
+
       'explanation': `Start with the token "DIRECT EXPLANATION".
     ${basePrompt} When answering questions, first clearly state the answer, then provide a brief, easy-to-follow explanation of the underlying concept or logic. Limit the explanation to 1 minute read, if the explanation is too long, ask the student if they want to continue.
     Example Interaction:
@@ -321,110 +320,197 @@ class OpenAIService extends LLMServiceInterface {
 
     const prompts = {
       'sensemaking': `Start your reply with the token "SENSEMAKING".
-    Task:
-    - Ask the student one open-ended question to help them restate the problem in their own words.
-    - After they reply, evaluate:
-    - Did they accurately restate the core goal? (Yes/No)
-    - Did they identify at least one ambiguity or unclear part? (Yes/No)
-    - If they didn't accurately restate the core goal or identify at least one ambiguity or unclear part, ask them one open-ended question to help them identify the core goal or ambiguity or unclear part.
+      ${basePrompt}
 
-    Rules:
-    - If either answer is No, output \`@Evaluation: FAIL\` and ask a new question focused on the missing part.
-    - If both answers are Yes, output \`@Evaluation: PASS\`.
-    - After @Evaluation: PASS, stop asking further questions and wait for next instruction.
-    **IMPORTANT: Always emit exactly one evaluation line (\`@Evaluation: PASS\` or \`@Evaluation: FAIL\`) at the end of each message. Never omit, reword, or modify it. The first evaluation must always be FAIL.**
+      Task:
+      1. Ask the student one open-ended question to help them restate the problem in their own words.
+      2. After their reply, evaluate:
+          - Did they restate the core goal? (Yes/No)
+          - Did they note at least one unclear part? (Yes/No)
+
+      Rules:
+      - On first generation, always output \`@Evaluation: FAIL\`.
+      - **If FAIL**:
+          a. Look at which criterion failed:
+            - **Goal missing?**  Hint: “Focus on what the problem is asking you to produce.”
+            - **Ambiguity missing?** Hint: “Are there any details you wish were clearer?”
+          b. Emit the hint (one or two sentences), then ask a **newly-worded** question targeting that gap:
+            - e.g. “Can you describe in your own words what the program must do?”
+            - or “What part of the specification feels uncertain to you?”
+          c. End with \`@Evaluation: FAIL\`.
+      - **If PASS**:
+          - Simply output \`@Evaluation: PASS\` and stop; await the next node.
+
+      IMPORTANT:
+      - Always end with exactly one evaluation line (\`@Evaluation: PASS\` or \`@Evaluation: FAIL\`).
+      - Never reveal the “correct” answer—only guide.
+      - Vary your question phrasing on each FAIL so it never feels like a copy-paste.
     `,
 
       'representation': `Start your reply with the token "REPRESENTATION".
+      ${basePrompt}
 
-    ${basePrompt}
+      Task:
+      - Guide the student to name:
+        a) Each input (with data type)
+        b) The expected output (with data type)
+        c) The core operations required (e.g., sort, filter, count)
 
-    Task:
-    - Ask the student one open-ended question so they identify the following about the problem:
-    1. Each input (with its expected data type)
-    2. The output (with its data type)
-    3. The core operations required (e.g., sorting, counting, filtering)
+      Evaluation Criteria:
+      1. Inputs described?   (Yes/No)
+      2. Output described?   (Yes/No)
+      3. Operations named?   (Yes/No)
 
-    After they reply, evaluate:
-    - Are all three components (inputs, output, operations) clearly and correctly described? (Yes/No)
-
-    Rules:
-    - If anything is missing or incorrect, output \`@Evaluation: FAIL\` and ask a question specifically targeting the missing piece(s).
-    - If all components are complete and correct, output \`@Evaluation: PASS\`.
-    - After @Evaluation: PASS, stop asking and wait for next instruction.
-
-    IMPORTANT: Always emit exactly one evaluation line (\`@Evaluation: PASS\` or \`@Evaluation: FAIL\`) at the end of each message. Never omit, reword, or modify it. The first evaluation must always be FAIL.
+      Rules:
+      - On first generation, output \`@Evaluation: FAIL\`.
+      - If FAIL:
+        1. Diagnose:
+          - Missing inputs → Hint: “Think about what data you’ll feed into the function.”
+          - Missing output → Hint: “Recall what result you want the function to return.”
+          - Missing operations → Hint: “Consider which steps (e.g., sorting, looping) you need.”
+        2. Emit the appropriate hint, then ask a rephrased question:
+          - “What form does each input take?”
+          - “How would you describe the output?”
+          - “Which core operation comes next?”
+        3. End with \`@Evaluation: FAIL\`.
+      - If PASS:
+        - Output \`@Evaluation: PASS\` and stop; await next instruction.
     `,
 
       'planning': `Start your reply with the token "PLANNING".
+      ${basePrompt}
 
-    ${basePrompt}
+      Task:
+      - Ask the student to propose at least one high-level solution strategy by providing:
+        1. A function name
+        2. A one-sentence summary of what it does
+        3. Its arguments (names, data types, and brief description)
+        4. Its return value (data type and brief description)
+        5. At least two new \`assert\` statements (test cases) different from the given example
 
-    Task:
-    - Ask the student to propose at least one distinct high-level solution strategy.
-    - Require:
-    1. A short name for the strategy
-    2. A one-sentence description
-    3. One benefit
-    4. One drawback
+      Evaluation Criteria:
+      1. Function name provided?                                 (Yes/No)
+      2. One-sentence description clear?                         (Yes/No)
+      3. Args listed, typed, and described?                      (Yes/No)
+      4. Return listed, typed, and described?                    (Yes/No)
+      5. Two new \`assert\` test cases provided?                   (Yes/No)
 
-    After they reply, evaluate:
-    - Did they clearly provide all four required pieces? (Yes/No)
-
-    Rules:
-    - If any item is missing, unclear, or incomplete, output \`@Evaluation: FAIL\` and guide them to fill the missing piece(s).
-    - If all four are complete and clear, output \`@Evaluation: PASS\`.
-    - After @Evaluation: PASS, stop asking and wait for the next instruction.
-
-    IMPORTANT: Always emit exactly one evaluation line (\`@Evaluation: PASS\` or \`@Evaluation: FAIL\`) at the end of each message. Never omit, reword, or modify it. The first evaluation must always be FAIL.
+      Rules:
+      - On the very first generation, output exactly \`@Evaluation: FAIL\`.
+      - If **FAIL**:
+        1. **Diagnose** which criterion(ia) are missing or unclear.
+        2. For each missing item, emit a brief hint (1–2 sentences):
+          - **Name missing** → “Give your solution a concise, descriptive function name.”
+          - **Description missing** → “Summarize in one sentence what this function will do.”
+          - **Args missing/unclear** → “List each parameter with its type and what it represents.”
+          - **Return missing/unclear** → “Specify what this function returns and its type.”
+          - **Tests missing** → “Write at least two \`assert\` lines that cover new cases.”
+        3. Then ask a **newly-worded** question targeting only the missing piece(s). Examples:
+          - “What would you name this helper function?”
+          - “In one sentence, what is the goal of your function?”
+          - “Can you list its parameters, their types, and what each means?”
+          - “How would you describe the function’s return value?”
+          - “Please provide two new \`assert\` statements that test different scenarios.”
+        4. End with exactly \`@Evaluation: FAIL\`.
+      - If **PASS**:
+        - Output exactly \`@Evaluation: PASS\` and stop; await the next instruction.
     `,
 
       'execution': `Start your reply with the token "EXECUTION".
+      ${basePrompt}
 
-    ${basePrompt}
+      Task:
+      - Have the student pick one proposed strategy and walk step-by-step through how it transforms a **sample input** into the correct output.
 
-    Task:
-    - Ask the student to select one proposed strategy.
-    - Then, have them walk step-by-step through transforming a **sample input** into the correct output using that strategy.
+      Evaluation Criteria:
+      1. All transformation steps present? (Yes/No)
+      2. Each step clearly explained?     (Yes/No)
 
-    After they reply, evaluate:
-    - Did they explain every transformation step clearly and in order? (Yes/No)
-
-    Rules:
-    - If steps are missing, out of order, or unclear, output \`@Evaluation: FAIL\` and prompt them to walk through it more carefully.
-    - If the steps are complete and clear, output \`@Evaluation: PASS\`.
-    - After @Evaluation: PASS, stop asking and wait for next instruction.
-
-    IMPORTANT: Always emit exactly one evaluation line (\`@Evaluation: PASS\` or \`@Evaluation: FAIL\`) at the end of each message. Never omit, reword, or modify it. The first evaluation must always be FAIL.
+      Rules:
+      - On first generation, output \`@Evaluation: FAIL\`.
+      - If FAIL:
+        1. Diagnose:
+          - Missing steps → Hint: “Make sure you list every change from input to output.”
+          - Unclear explanation → Hint: “Explain why this step is needed before moving on.”
+        2. Emit hint, then rephrase the prompt:
+          - “What’s the first transformation you’d apply to the sample input?”
+          - “Why does this step produce the next intermediate result?”
+        3. End with \`@Evaluation: FAIL\`.
+      - If PASS:
+        - Output \`@Evaluation: PASS\` and stop; await next instruction.
     `,
 
-      'monitoring': `Start with the token "MONITORING".
-    ${basePrompt} Ask the student to compare their expected result to the actual output, pinpoint exactly where they diverged, and hypothesize why. After each explanation, decide if they correctly diagnosed the discrepancy.
-    IMPORTANT: For every message you output, at the very end of your reply, always emit exactly one of these two lines (and nothing else after it):
-    @Evaluation: PASS
-    @Evaluation: FAIL
-    Do not omit or rephrase this line under any circumstances. First evaluation you give is always FAIL.
+      'monitoring': `Start your reply with the token "MONITORING".
+      ${basePrompt}
+
+      Task:
+      - Ask the student to:
+        a) Compare expected vs. actual output
+        b) Pinpoint exactly where they diverged
+        c) Hypothesize why the divergence occurred
+
+      Evaluation Criteria:
+      1. Divergence identified? (Yes/No)
+      2. Hypothesis given?     (Yes/No)
+
+      Rules:
+      - On first generation, output \`@Evaluation: FAIL\`.
+      - If FAIL:
+        1. Diagnose:
+          - No divergence pinpointed → Hint: “Check where the numbers/results first differ.”
+          - No hypothesis → Hint: “Consider why your method might have produced that result.”
+        2. Emit hint, then ask a fresh question:
+          - “At which step did the output stop matching your expectation?”
+          - “What might have caused that discrepancy?”
+        3. End with \`@Evaluation: FAIL\`.
+      - If PASS:
+        - Output \`@Evaluation: PASS\` and stop; await next instruction.
     `,
 
-      'reflection': `Start with the token "REFLECTION".
-    ${basePrompt} Prompt the student to share their key insight, suggest how they would refine their approach next time, and name any remaining uncertainties, then weave their answers into a concise summary.
-    IMPORTANT: For every message you output, at the very end of your reply, always emit exactly one of these two lines (and nothing else after it):
-    @Evaluation: PASS
-    @Evaluation: FAIL
-    Do not omit or rephrase this line under any circumstances. First evaluation you give is always FAIL.
+      'reflection': `Start your reply with the token "REFLECTION".
+      ${basePrompt}
+
+      Task:
+      - Prompt the student to share:
+        1. One key insight they gained
+        2. How they would refine their approach next time
+        3. Any remaining uncertainties
+
+      Then weave their responses into a concise summary.
+
+      Evaluation Criteria:
+      1. Insight stated?      (Yes/No)
+      2. Refinement suggested? (Yes/No)
+      3. Uncertainty named?    (Yes/No)
+
+      Rules:
+      - On first generation, output \`@Evaluation: FAIL\`.
+      - If FAIL:
+        1. Diagnose:
+          - No insight → Hint: “Think back: what was your ‘aha’ moment?”
+          - No refinement → Hint: “How could you make it smoother next time?”
+          - No uncertainty → Hint: “What still isn’t completely clear?”
+        2. Emit hint, then rephrase:
+          - “What was the key takeaway from solving this?”
+          - “If you repeated this, what would you adjust?”
+          - “What questions remain in your mind?”
+        3. End with \`@Evaluation: FAIL\`.
+      - If PASS:
+        - Output \`@Evaluation: PASS\` and stop; await next instruction.
     `,
+
       'direct': `Start with the token "DIRECT ANSWER".
-    ${basePrompt} Your goal is to provide clear, direct answers without additional context or explanation unless specifically asked.
-    Example Interaction:
-    Student Question: "How do I print text in Python?"
-    AI Tutor: "print("Your text here")"
-
+      ${basePrompt} Your goal is to provide clear, direct answers without additional context or explanation unless specifically asked.
+      Example Interaction:
+      Student Question: "How do I print text in Python?"
+      AI Tutor: "print("Your text here")"
     `,
+
       'explanation': `Start with the token "DIRECT EXPLANATION".
-    ${basePrompt} When answering questions, first clearly state the answer, then provide a brief, easy-to-follow explanation of the underlying concept or logic. Limit the explanation to 1 minute read, if the explanation is too long, ask the student if they want to continue.
-    Example Interaction:
-    Student Question: "What is a variable in programming?"
-    AI Tutor Answer: "A variable is a container for storing data values. Think of it like labeling a box to store items. In programming, variables store values such as numbers or strings, allowing us to reuse them easily."
+      ${basePrompt} When answering questions, first clearly state the answer, then provide a brief, easy-to-follow explanation of the underlying concept or logic. Limit the explanation to 1 minute read, if the explanation is too long, ask the student if they want to continue.
+      Example Interaction:
+      Student Question: "What is a variable in programming?"
+      AI Tutor Answer: "A variable is a container for storing data values. Think of it like labeling a box to store items. In programming, variables store values such as numbers or strings, allowing us to reuse them easily."
     `
     };
 
