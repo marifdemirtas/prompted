@@ -16,7 +16,7 @@ const app = express();
 const PORT = process.env.PORT || 8000;
 
 // MongoDB connection
-mongoose.connect(process.env.MONGO_URI || 'mongodb+srv://Cluster15700:ZVN4fVRdWW94@cluster15700.cwlkwzi.mongodb.net')
+mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/prompted')
   .then(() => console.log('MongoDB connected'))
   .catch(err => console.error('MongoDB connection error:', err));
 
@@ -37,7 +37,7 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   store: MongoStore.create({
-    mongoUrl: process.env.MONGO_URI || 'mongodb+srv://Cluster15700:ZVN4fVRdWW94@cluster15700.cwlkwzi.mongodb.net',
+    mongoUrl: process.env.MONGO_URI || 'mongodb://localhost:27017/prompted',
     collectionName: 'sessions'
   }),
   cookie: {
