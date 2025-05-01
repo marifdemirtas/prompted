@@ -16,14 +16,14 @@ const app = express();
 const PORT = process.env.PORT || 8000;
 
 // MongoDB connection
-mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/prompted')
+mongoose.connect(process.env.MONGO_URI || 'mongodb+srv://Cluster15700:ZVN4fVRdWW94@cluster15700.cwlkwzi.mongodb.net')
   .then(() => console.log('MongoDB connected'))
   .catch(err => console.error('MongoDB connection error:', err));
 
 // Configure middleware
 app.use(express.json());
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:3000',
+  origin: process.env.CLIENT_URL || 'https://promptedpro.web.illinois.edu',
   credentials: true
 }));
 app.use(helmet({
@@ -36,8 +36,8 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'prompted-session-secret',
   resave: false,
   saveUninitialized: false,
-  store: MongoStore.create({ 
-    mongoUrl: process.env.MONGO_URI || 'mongodb://localhost:27017/prompted',
+  store: MongoStore.create({
+    mongoUrl: process.env.MONGO_URI || 'mongodb+srv://Cluster15700:ZVN4fVRdWW94@cluster15700.cwlkwzi.mongodb.net',
     collectionName: 'sessions'
   }),
   cookie: {
@@ -87,4 +87,4 @@ app.use((err, req, res, next) => {
 // Start server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-}); 
+});

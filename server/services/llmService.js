@@ -4,117 +4,6 @@ const dotenv = require('dotenv');
 
 dotenv.config();
 
-const basePrompt = `You are a tutor specializing in introductory computer science, helping computer science freshman with their programming learning.`;
-
-const prompts = {
-  'sensemaking': `Start your reply with the token "SENSEMAKING".
-Task:
-- Ask the student one open-ended question to help them restate the problem in their own words.
-- After they reply, evaluate:
-- Did they accurately restate the core goal? (Yes/No)
-- Did they identify at least one ambiguity or unclear part? (Yes/No)
-- If they didn't accurately restate the core goal or identify at least one ambiguity or unclear part, ask them one open-ended question to help them identify the core goal or ambiguity or unclear part.
-
-Rules:
-- If either answer is No, output \`@Evaluation: FAIL\` and ask a new question focused on the missing part.
-- If both answers are Yes, output \`@Evaluation: PASS\`.
-- After @Evaluation: PASS, stop asking further questions and wait for next instruction.
-**IMPORTANT: Always emit exactly one evaluation line (\`@Evaluation: PASS\` or \`@Evaluation: FAIL\`) at the end of each message. Never omit, reword, or modify it. The first evaluation must always be FAIL.**
-`,
-
-  'representation': `Start your reply with the token "REPRESENTATION".
-
-${basePrompt}
-
-Task:
-- Ask the student one open-ended question so they identify the following about the problem:
-1. Each input (with its expected data type)
-2. The output (with its data type)
-3. The core operations required (e.g., sorting, counting, filtering)
-
-After they reply, evaluate:
-- Are all three components (inputs, output, operations) clearly and correctly described? (Yes/No)
-
-Rules:
-- If anything is missing or incorrect, output \`@Evaluation: FAIL\` and ask a question specifically targeting the missing piece(s).
-- If all components are complete and correct, output \`@Evaluation: PASS\`.
-- After @Evaluation: PASS, stop asking and wait for next instruction.
-
-IMPORTANT: Always emit exactly one evaluation line (\`@Evaluation: PASS\` or \`@Evaluation: FAIL\`) at the end of each message. Never omit, reword, or modify it. The first evaluation must always be FAIL.
-`,
-
-  'planning': `Start your reply with the token "PLANNING".
-
-${basePrompt}
-
-Task:
-- Ask the student to propose at least one distinct high-level solution strategy.
-- Require:
-1. A short name for the strategy
-2. A one-sentence description
-3. One benefit
-4. One drawback
-
-After they reply, evaluate:
-- Did they clearly provide all four required pieces? (Yes/No)
-
-Rules:
-- If any item is missing, unclear, or incomplete, output \`@Evaluation: FAIL\` and guide them to fill the missing piece(s).
-- If all four are complete and clear, output \`@Evaluation: PASS\`.
-- After @Evaluation: PASS, stop asking and wait for the next instruction.
-
-IMPORTANT: Always emit exactly one evaluation line (\`@Evaluation: PASS\` or \`@Evaluation: FAIL\`) at the end of each message. Never omit, reword, or modify it. The first evaluation must always be FAIL.
-`,
-
-  'execution': `Start your reply with the token "EXECUTION".
-
-${basePrompt}
-
-Task:
-- Ask the student to select one proposed strategy.
-- Then, have them walk step-by-step through transforming a **sample input** into the correct output using that strategy.
-
-After they reply, evaluate:
-- Did they explain every transformation step clearly and in order? (Yes/No)
-
-Rules:
-- If steps are missing, out of order, or unclear, output \`@Evaluation: FAIL\` and prompt them to walk through it more carefully.
-- If the steps are complete and clear, output \`@Evaluation: PASS\`.
-- After @Evaluation: PASS, stop asking and wait for next instruction.
-
-IMPORTANT: Always emit exactly one evaluation line (\`@Evaluation: PASS\` or \`@Evaluation: FAIL\`) at the end of each message. Never omit, reword, or modify it. The first evaluation must always be FAIL.
-`,
-
-  'monitoring': `Start with the token "MONITORING".
-${basePrompt} Ask the student to compare their expected result to the actual output, pinpoint exactly where they diverged, and hypothesize why. After each explanation, decide if they correctly diagnosed the discrepancy.
-IMPORTANT: For every message you output, at the very end of your reply, always emit exactly one of these two lines (and nothing else after it):
-@Evaluation: PASS
-@Evaluation: FAIL
-Do not omit or rephrase this line under any circumstances. First evaluation you give is always FAIL.
-`,
-
-  'reflection': `Start with the token "REFLECTION".
-${basePrompt} Prompt the student to share their key insight, suggest how they would refine their approach next time, and name any remaining uncertainties, then weave their answers into a concise summary.
-IMPORTANT: For every message you output, at the very end of your reply, always emit exactly one of these two lines (and nothing else after it):
-@Evaluation: PASS
-@Evaluation: FAIL
-Do not omit or rephrase this line under any circumstances. First evaluation you give is always FAIL.
-`,
-  'direct': `Start with the token "DIRECT ANSWER".
-${basePrompt} Your goal is to provide clear, direct answers without additional context or explanation unless specifically asked.
-Example Interaction:
-Student Question: "How do I print text in Python?"
-AI Tutor: "print("Your text here")"
-
-`,
-  'explanation': `Start with the token "DIRECT EXPLANATION".
-${basePrompt} When answering questions, first clearly state the answer, then provide a brief, easy-to-follow explanation of the underlying concept or logic. Limit the explanation to 1 minute read, if the explanation is too long, ask the student if they want to continue.
-Example Interaction:
-Student Question: "What is a variable in programming?"
-AI Tutor Answer: "A variable is a container for storing data values. Think of it like labeling a box to store items. In programming, variables store values such as numbers or strings, allowing us to reuse them easily."
-`
-};
-
 // Initialize Gemini client
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
@@ -125,23 +14,8 @@ const openai = new OpenAI(process.env.OPENAI_API_KEY);
  * LLM Service interface - all services will implement these functions
  */
 class LLMServiceInterface {
-  async generateResponse(promptData) {
-    throw new Error('Method not implemented');
-  }
-
-  async generateTitle(message) {
-    throw new Error('Method not implemented');
-  }
-}
-
-/**
- * Gemini LLM Service with different tutor modes
- */
-class GeminiService extends LLMServiceInterface {
   constructor(tutorMode = 'direct') {
-    super();
     this.tutorMode = tutorMode;
-    this.model_string = process.env.GEMINI_MODEL || 'gemini-2.0-flash-lite';
     this.stage = 0; // only used if tutorMode is 'scaffolding'
     this.stages = [
       'sensemaking',
@@ -154,10 +28,190 @@ class GeminiService extends LLMServiceInterface {
   }
 
   /**
+   * Generate LLM response based on conversation history
+   * @param {Object} promptData - Data for generating the prompt
+   * @param {Array} promptData.messages - Array of message objects with role and content
+   * @returns {Promise<string>} - The LLM response
+   */
+  async generateResponse(promptData) {
+    try {
+      const { messages } = promptData;
+
+      if (this.tutorMode === 'scaffolding') {
+        const mode = this.stages[this.stage] || this.stages[0];
+        console.log(`Current mode: ${mode}`);
+
+        // Get the response and evaluation
+        const { responseText, evaluation } = await this.generateResponseForMode(mode, messages);
+
+        // Determine if the stage is passed
+        const passed = evaluation === 'PASS';
+
+        console.log(`Passed: ${passed}, Current stage: ${this.stage + 1}, Total stages: ${this.stages.length}`);
+
+        // If passed and not the last stage, move to the next stage
+        if (passed && this.stage < this.stages.length - 1) {
+            this.stage++;
+            const nextMode = this.stages[this.stage];
+            console.log(`Moving to next mode: ${nextMode}`);
+
+            // Generate response for the next mode
+            const { responseText: nextResponseText } = await this.generateResponseForMode(nextMode, messages);
+            return nextResponseText; // Overwrite and return the response from the next mode
+        }
+
+        return responseText;
+      } else {
+        // Default behavior for other modes
+        const { responseText } = await this.generateResponseForMode(this.tutorMode, messages);
+        return responseText;
+      }
+    } catch (error) {
+      console.error('Error generating LLM response:', error);
+      throw error;
+    }
+  }
+
+  generateSystemPromptForMode(mode) {
+    throw new Error('Method not implemented');
+  }
+
+  async generateTitle(message) {
+    throw new Error('Method not implemented');
+  }
+
+  // Helper method to extract evaluation from response
+  extractEvaluation(responseText) {
+    const evaluationMatch = responseText.match(/@Evaluation: (PASS|FAIL)/);
+    return evaluationMatch ? evaluationMatch[1] : null;
+  }
+}
+
+/**
+ * Gemini LLM Service with different tutor modes
+ */
+class GeminiService extends LLMServiceInterface {
+  constructor(tutorMode = 'direct') {
+    super(tutorMode);
+    this.model_string = process.env.GEMINI_MODEL || 'gemini-2.0-flash-lite';
+  }
+
+  /**
    * Generate system prompt based on tutor mode
    * @returns {string} - The system prompt
    */
   generateSystemPromptForMode(mode) {
+    const basePrompt = `You are a tutor specializing in introductory computer science, helping computer science freshman with their programming learning.`;
+
+    const prompts = {
+      'sensemaking': `Start your reply with the token "SENSEMAKING".
+    Task:
+    - Ask the student one open-ended question to help them restate the problem in their own words.
+    - After they reply, evaluate:
+    - Did they accurately restate the core goal? (Yes/No)
+    - Did they identify at least one ambiguity or unclear part? (Yes/No)
+    - If they didn't accurately restate the core goal or identify at least one ambiguity or unclear part, ask them one open-ended question to help them identify the core goal or ambiguity or unclear part.
+
+    Rules:
+    - If either answer is No, output \`@Evaluation: FAIL\` and ask a new question focused on the missing part.
+    - If both answers are Yes, output \`@Evaluation: PASS\`.
+    - After @Evaluation: PASS, stop asking further questions and wait for next instruction.
+    **IMPORTANT: Always emit exactly one evaluation line (\`@Evaluation: PASS\` or \`@Evaluation: FAIL\`) at the end of each message. Never omit, reword, or modify it. The first evaluation must always be FAIL.**
+    `,
+
+      'representation': `Start your reply with the token "REPRESENTATION".
+
+    ${basePrompt}
+
+    Task:
+    - Ask the student one open-ended question so they identify the following about the problem:
+    1. Each input (with its expected data type)
+    2. The output (with its data type)
+    3. The core operations required (e.g., sorting, counting, filtering)
+
+    After they reply, evaluate:
+    - Are all three components (inputs, output, operations) clearly and correctly described? (Yes/No)
+
+    Rules:
+    - If anything is missing or incorrect, output \`@Evaluation: FAIL\` and ask a question specifically targeting the missing piece(s).
+    - If all components are complete and correct, output \`@Evaluation: PASS\`.
+    - After @Evaluation: PASS, stop asking and wait for next instruction.
+
+    IMPORTANT: Always emit exactly one evaluation line (\`@Evaluation: PASS\` or \`@Evaluation: FAIL\`) at the end of each message. Never omit, reword, or modify it. The first evaluation must always be FAIL.
+    `,
+
+      'planning': `Start your reply with the token "PLANNING".
+
+    ${basePrompt}
+
+    Task:
+    - Ask the student to propose at least one distinct high-level solution strategy.
+    - Require:
+    1. A short name for the strategy
+    2. A one-sentence description
+    3. One benefit
+    4. One drawback
+
+    After they reply, evaluate:
+    - Did they clearly provide all four required pieces? (Yes/No)
+
+    Rules:
+    - If any item is missing, unclear, or incomplete, output \`@Evaluation: FAIL\` and guide them to fill the missing piece(s).
+    - If all four are complete and clear, output \`@Evaluation: PASS\`.
+    - After @Evaluation: PASS, stop asking and wait for the next instruction.
+
+    IMPORTANT: Always emit exactly one evaluation line (\`@Evaluation: PASS\` or \`@Evaluation: FAIL\`) at the end of each message. Never omit, reword, or modify it. The first evaluation must always be FAIL.
+    `,
+
+      'execution': `Start your reply with the token "EXECUTION".
+
+    ${basePrompt}
+
+    Task:
+    - Ask the student to select one proposed strategy.
+    - Then, have them walk step-by-step through transforming a **sample input** into the correct output using that strategy.
+
+    After they reply, evaluate:
+    - Did they explain every transformation step clearly and in order? (Yes/No)
+
+    Rules:
+    - If steps are missing, out of order, or unclear, output \`@Evaluation: FAIL\` and prompt them to walk through it more carefully.
+    - If the steps are complete and clear, output \`@Evaluation: PASS\`.
+    - After @Evaluation: PASS, stop asking and wait for next instruction.
+
+    IMPORTANT: Always emit exactly one evaluation line (\`@Evaluation: PASS\` or \`@Evaluation: FAIL\`) at the end of each message. Never omit, reword, or modify it. The first evaluation must always be FAIL.
+    `,
+
+      'monitoring': `Start with the token "MONITORING".
+    ${basePrompt} Ask the student to compare their expected result to the actual output, pinpoint exactly where they diverged, and hypothesize why. After each explanation, decide if they correctly diagnosed the discrepancy.
+    IMPORTANT: For every message you output, at the very end of your reply, always emit exactly one of these two lines (and nothing else after it):
+    @Evaluation: PASS
+    @Evaluation: FAIL
+    Do not omit or rephrase this line under any circumstances. First evaluation you give is always FAIL.
+    `,
+
+      'reflection': `Start with the token "REFLECTION".
+    ${basePrompt} Prompt the student to share their key insight, suggest how they would refine their approach next time, and name any remaining uncertainties, then weave their answers into a concise summary.
+    IMPORTANT: For every message you output, at the very end of your reply, always emit exactly one of these two lines (and nothing else after it):
+    @Evaluation: PASS
+    @Evaluation: FAIL
+    Do not omit or rephrase this line under any circumstances. First evaluation you give is always FAIL.
+    `,
+      'direct': `Start with the token "DIRECT ANSWER".
+    ${basePrompt} Your goal is to provide clear, direct answers without additional context or explanation unless specifically asked.
+    Example Interaction:
+    Student Question: "How do I print text in Python?"
+    AI Tutor: "print("Your text here")"
+
+    `,
+      'explanation': `Start with the token "DIRECT EXPLANATION".
+    ${basePrompt} When answering questions, first clearly state the answer, then provide a brief, easy-to-follow explanation of the underlying concept or logic. Limit the explanation to 1 minute read, if the explanation is too long, ask the student if they want to continue.
+    Example Interaction:
+    Student Question: "What is a variable in programming?"
+    AI Tutor Answer: "A variable is a container for storing data values. Think of it like labeling a box to store items. In programming, variables store values such as numbers or strings, allowing us to reuse them easily."
+    `
+    };
+
     if (prompts[mode]) {
       return prompts[mode];
     } else {
@@ -173,44 +227,6 @@ class GeminiService extends LLMServiceInterface {
   convertRoleForGemini(role) {
     return role === 'student' ? 'user' : 'model';
   }
-
-  /**
-   * Generate LLM response based on conversation history
-   * @param {Object} promptData - Data for generating the prompt
-   * @param {Array} promptData.messages - Array of message objects with role and content
-   * @returns {Promise<string>} - The LLM response
-   */
-  async generateResponse(promptData) {
-    try {
-        const { messages } = promptData;
-
-        if (this.tutorMode === 'scaffolding') {
-            const mode = this.stages[this.stage] || this.stages[0];
-            console.log(`Current mode: ${mode}`);
-
-            // Get the response and evaluation
-            const { responseText, evaluation } = await this.generateResponseForMode(mode, messages);
-
-            // Determine if the stage is passed
-            const passed = evaluation === 'PASS';
-
-            console.log(`Passed: ${passed}, Current stage: ${this.stage + 1}, Total stages: ${this.stages.length}`);
-            if (passed && this.stage < this.stages.length - 1) {
-                this.stage++;
-            }
-
-            return responseText;
-        } else {
-            // Default behavior for other modes
-            const { responseText, evaluation } = await this.generateResponseForMode(this.tutorMode, messages);
-            return responseText;
-        }
-    } catch (error) {
-        console.error('Error generating LLM response:', error);
-        throw error;
-    }
-  }
-
 
   async generateResponseForMode(mode, messages) {
     try {
@@ -248,10 +264,7 @@ class GeminiService extends LLMServiceInterface {
       const result = await chat.sendMessage(lastMessage.parts[0].text);
 
       const responseText = result.response.text();
-
-      // Extract evaluation message
-      const evaluationMatch = responseText.match(/@Evaluation: (PASS|FAIL)/);
-      const evaluation = evaluationMatch ? evaluationMatch[1] : null;
+      const evaluation = this.extractEvaluation(responseText);
 
       return { responseText, evaluation };
     } catch (error) {
@@ -284,26 +297,8 @@ class GeminiService extends LLMServiceInterface {
 
 class OpenAIService extends LLMServiceInterface {
   constructor(tutorMode = 'direct') {
-    super();
-    this.tutorMode = tutorMode;
+    super(tutorMode);
     this.model_string = process.env.OPENAI_MODEL || 'gpt-4o-mini';
-    this.stage = 0; // only used if tutorMode is 'scaffolding'
-    this.stages = [
-      'sensemaking',
-      'representation',
-      'planning',
-      'execution',
-      'monitoring',
-      'reflection'
-    ];
-  }
-
-  generateSystemPromptForMode(mode) {
-    if (prompts[mode]) {
-      return prompts[mode];
-    } else {
-      throw new Error(`Unsupported tutor mode: ${mode}`);
-    }
   }
 
   /**
@@ -318,39 +313,125 @@ class OpenAIService extends LLMServiceInterface {
   }
 
   /**
-   * Generate LLM response based on conversation history
-   * @param {Object} promptData - Data for generating the prompt
-   * @param {Array} promptData.messages - Array of message objects with role and content
-   * @returns {Promise<string>} - The LLM response
+   * Generate system prompt based on tutor mode
+   * @returns {string} - The system prompt
    */
-  async generateResponse(promptData) {
-    try {
-      const { messages } = promptData;
+  generateSystemPromptForMode(mode) {
+    const basePrompt = `You are a tutor specializing in introductory computer science, helping computer science freshman with their programming learning.`;
 
-      if (this.tutorMode === 'scaffolding') {
-        const mode = this.stages[this.stage] || this.stages[0];
-        console.log(`Current mode: ${mode}`);
+    const prompts = {
+      'sensemaking': `Start your reply with the token "SENSEMAKING".
+    Task:
+    - Ask the student one open-ended question to help them restate the problem in their own words.
+    - After they reply, evaluate:
+    - Did they accurately restate the core goal? (Yes/No)
+    - Did they identify at least one ambiguity or unclear part? (Yes/No)
+    - If they didn't accurately restate the core goal or identify at least one ambiguity or unclear part, ask them one open-ended question to help them identify the core goal or ambiguity or unclear part.
 
-        // Get the response and evaluation
-        const { responseText, evaluation } = await this.generateResponseForMode(mode, messages);
+    Rules:
+    - If either answer is No, output \`@Evaluation: FAIL\` and ask a new question focused on the missing part.
+    - If both answers are Yes, output \`@Evaluation: PASS\`.
+    - After @Evaluation: PASS, stop asking further questions and wait for next instruction.
+    **IMPORTANT: Always emit exactly one evaluation line (\`@Evaluation: PASS\` or \`@Evaluation: FAIL\`) at the end of each message. Never omit, reword, or modify it. The first evaluation must always be FAIL.**
+    `,
 
-        // Determine if the stage is passed
-        const passed = evaluation === 'PASS';
+      'representation': `Start your reply with the token "REPRESENTATION".
 
-        console.log(`Passed: ${passed}, Current stage: ${this.stage + 1}, Total stages: ${this.stages.length}`);
-        if (passed && this.stage < this.stages.length - 1) {
-            this.stage++;
-        }
+    ${basePrompt}
 
-        return responseText;
-      } else {
-        // Default behavior for other modes
-        const { responseText } = await this.generateResponseForMode(this.tutorMode, messages);
-        return responseText;
-      }
-    } catch (error) {
-      console.error('Error generating OpenAI response:', error);
-      throw error;
+    Task:
+    - Ask the student one open-ended question so they identify the following about the problem:
+    1. Each input (with its expected data type)
+    2. The output (with its data type)
+    3. The core operations required (e.g., sorting, counting, filtering)
+
+    After they reply, evaluate:
+    - Are all three components (inputs, output, operations) clearly and correctly described? (Yes/No)
+
+    Rules:
+    - If anything is missing or incorrect, output \`@Evaluation: FAIL\` and ask a question specifically targeting the missing piece(s).
+    - If all components are complete and correct, output \`@Evaluation: PASS\`.
+    - After @Evaluation: PASS, stop asking and wait for next instruction.
+
+    IMPORTANT: Always emit exactly one evaluation line (\`@Evaluation: PASS\` or \`@Evaluation: FAIL\`) at the end of each message. Never omit, reword, or modify it. The first evaluation must always be FAIL.
+    `,
+
+      'planning': `Start your reply with the token "PLANNING".
+
+    ${basePrompt}
+
+    Task:
+    - Ask the student to propose at least one distinct high-level solution strategy.
+    - Require:
+    1. A short name for the strategy
+    2. A one-sentence description
+    3. One benefit
+    4. One drawback
+
+    After they reply, evaluate:
+    - Did they clearly provide all four required pieces? (Yes/No)
+
+    Rules:
+    - If any item is missing, unclear, or incomplete, output \`@Evaluation: FAIL\` and guide them to fill the missing piece(s).
+    - If all four are complete and clear, output \`@Evaluation: PASS\`.
+    - After @Evaluation: PASS, stop asking and wait for the next instruction.
+
+    IMPORTANT: Always emit exactly one evaluation line (\`@Evaluation: PASS\` or \`@Evaluation: FAIL\`) at the end of each message. Never omit, reword, or modify it. The first evaluation must always be FAIL.
+    `,
+
+      'execution': `Start your reply with the token "EXECUTION".
+
+    ${basePrompt}
+
+    Task:
+    - Ask the student to select one proposed strategy.
+    - Then, have them walk step-by-step through transforming a **sample input** into the correct output using that strategy.
+
+    After they reply, evaluate:
+    - Did they explain every transformation step clearly and in order? (Yes/No)
+
+    Rules:
+    - If steps are missing, out of order, or unclear, output \`@Evaluation: FAIL\` and prompt them to walk through it more carefully.
+    - If the steps are complete and clear, output \`@Evaluation: PASS\`.
+    - After @Evaluation: PASS, stop asking and wait for next instruction.
+
+    IMPORTANT: Always emit exactly one evaluation line (\`@Evaluation: PASS\` or \`@Evaluation: FAIL\`) at the end of each message. Never omit, reword, or modify it. The first evaluation must always be FAIL.
+    `,
+
+      'monitoring': `Start with the token "MONITORING".
+    ${basePrompt} Ask the student to compare their expected result to the actual output, pinpoint exactly where they diverged, and hypothesize why. After each explanation, decide if they correctly diagnosed the discrepancy.
+    IMPORTANT: For every message you output, at the very end of your reply, always emit exactly one of these two lines (and nothing else after it):
+    @Evaluation: PASS
+    @Evaluation: FAIL
+    Do not omit or rephrase this line under any circumstances. First evaluation you give is always FAIL.
+    `,
+
+      'reflection': `Start with the token "REFLECTION".
+    ${basePrompt} Prompt the student to share their key insight, suggest how they would refine their approach next time, and name any remaining uncertainties, then weave their answers into a concise summary.
+    IMPORTANT: For every message you output, at the very end of your reply, always emit exactly one of these two lines (and nothing else after it):
+    @Evaluation: PASS
+    @Evaluation: FAIL
+    Do not omit or rephrase this line under any circumstances. First evaluation you give is always FAIL.
+    `,
+      'direct': `Start with the token "DIRECT ANSWER".
+    ${basePrompt} Your goal is to provide clear, direct answers without additional context or explanation unless specifically asked.
+    Example Interaction:
+    Student Question: "How do I print text in Python?"
+    AI Tutor: "print("Your text here")"
+
+    `,
+      'explanation': `Start with the token "DIRECT EXPLANATION".
+    ${basePrompt} When answering questions, first clearly state the answer, then provide a brief, easy-to-follow explanation of the underlying concept or logic. Limit the explanation to 1 minute read, if the explanation is too long, ask the student if they want to continue.
+    Example Interaction:
+    Student Question: "What is a variable in programming?"
+    AI Tutor Answer: "A variable is a container for storing data values. Think of it like labeling a box to store items. In programming, variables store values such as numbers or strings, allowing us to reuse them easily."
+    `
+    };
+
+    if (prompts[mode]) {
+      return prompts[mode];
+    } else {
+      throw new Error(`Unsupported tutor mode: ${mode}`);
     }
   }
 
@@ -382,10 +463,7 @@ class OpenAIService extends LLMServiceInterface {
       });
 
       const responseText = result.choices[0].message.content;
-
-      // Extract evaluation message
-      const evaluationMatch = responseText.match(/@Evaluation: (PASS|FAIL)/);
-      const evaluation = evaluationMatch ? evaluationMatch[1] : null;
+      const evaluation = this.extractEvaluation(responseText);
 
       return { responseText, evaluation };
     } catch (error) {

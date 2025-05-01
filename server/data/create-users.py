@@ -1,17 +1,19 @@
 import random
 import csv
 
-# Set the course for all users
-MAX_USERS = 50  # Number of users to generate
-
 # Available LLM services
-LLM_SERVICES = ["gemini-direct", "gemini-explanation", "gemini-scaffolding"]
+LLM_SERVICES = ["gemini-direct", "gemini-explanation", "gemini-scaffolding",
+                "openai-direct", "openai-explanation", "openai-scaffolding"]
+
+# Set the course for all users
+MAX_USERS = 60  # Number of users to generate
+USERS_PER_SERVICE = MAX_USERS // len(LLM_SERVICES)  # Number of users per service
 
 # Predefined simple words (4–8 characters, easy to read)
 WORD_LIST = [
-    "apple", "baker", "candy", "delta", "eagle", "frost", "grape", "happy", 
-    "island", "jolly", "kitten", "lemon", "monkey", "noodle", "orange", 
-    "panda", "quartz", "rocket", "sunny", "tiger", "umbrella", "violet", 
+    "apple", "baker", "candy", "delta", "eagle", "frost", "grape", "happy",
+    "island", "jolly", "kitten", "lemon", "monkey", "noodle", "orange",
+    "panda", "quartz", "rocket", "sunny", "tiger", "umbrella", "violet",
     "whale", "xenon", "yellow", "zebra"
 ]
 
@@ -35,12 +37,12 @@ def assign_random_services():
 students = []
 usernames = set()
 
-for _ in range(MAX_USERS):
+for i in range(MAX_USERS):
     username = generate_unique_phrase(usernames)
     usernames.add(username)
-    
+
     # Assign random services
-    allowed_services, default_service = assign_random_services()
+    allowed_services, default_service = [LLM_SERVICES[i // USERS_PER_SERVICE]], LLM_SERVICES[i // USERS_PER_SERVICE]
 
     students.append({
         "username": username,
