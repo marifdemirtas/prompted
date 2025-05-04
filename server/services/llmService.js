@@ -104,7 +104,7 @@ class GeminiService extends LLMServiceInterface {
     const basePrompt = `You are a tutor specializing in introductory computer science, helping computer science freshman with their programming learning.`;
 
     const prompts = {
-      'sensemaking': `Start your reply with the token "SENSEMAKING".
+      'sensemaking': `
 
       ${basePrompt}
 
@@ -122,7 +122,7 @@ class GeminiService extends LLMServiceInterface {
       - **IMPORTANT: Always end your message with exactly one line containing either \`@Evaluation: PASS\` or \`@Evaluation: FAIL\`. Do not include any other text after this line.**
     `,
 
-      'representation': `Start your reply with the token "REPRESENTATION".
+      'representation': `
 
       ${basePrompt}
 
@@ -140,7 +140,7 @@ class GeminiService extends LLMServiceInterface {
       - **IMPORTANT: Always end your message with exactly one line containing either \`@Evaluation: PASS\` or \`@Evaluation: FAIL\`. Do not include any other text after this line.**
     `,
 
-      'planning': `Start your reply with the token "PLANNING".
+      'planning': `
 
       ${basePrompt}
 
@@ -160,7 +160,7 @@ class GeminiService extends LLMServiceInterface {
       - **IMPORTANT: Always end your message with exactly one line containing either \`@Evaluation: PASS\` or \`@Evaluation: FAIL\`. Do not include any other text after this line.**
     `,
 
-      'execution': `Start your reply with the token "EXECUTION".
+      'execution': `
 
       ${basePrompt}
 
@@ -176,7 +176,7 @@ class GeminiService extends LLMServiceInterface {
       - **IMPORTANT: Always end your message with exactly one line containing either \`@Evaluation: PASS\` or \`@Evaluation: FAIL\`. Do not include any other text after this line.**
     `,
 
-      'monitoring': `Start with the token "MONITORING".
+      'monitoring': `
       ${basePrompt} Ask the student to compare their expected result to the actual output (if they have one), pinpoint exactly where they diverged, and hypothesize why. After their explanation, evaluate if they have correctly diagnosed the discrepancy.
 
       Rules:
@@ -186,7 +186,7 @@ class GeminiService extends LLMServiceInterface {
       - **IMPORTANT: Always end your message with exactly one line containing either \`@Evaluation: PASS\` or \`@Evaluation: FAIL\`. Do not include any other text after this line.**
     `,
 
-      'reflection': `Start with the token "REFLECTION".
+      'reflection': `
       ${basePrompt} Prompt the student to share their key insight from the problem-solving process, suggest how they would refine their approach next time, and name any remaining uncertainties. After their response, evaluate if they have provided thoughtful answers to all three parts.
 
       Rules:
@@ -196,14 +196,14 @@ class GeminiService extends LLMServiceInterface {
       - **IMPORTANT: Always end your message with exactly one line containing either \`@Evaluation: PASS\` or \`@Evaluation: FAIL\`. Do not include any other text after this line.**
     `,
 
-      'direct': `Start with the token "DIRECT ANSWER".
+      'direct': `
     ${basePrompt} Your goal is to provide clear, direct answers without additional context or explanation unless specifically asked.
     Example Interaction:
     Student Question: "How do I print text in Python?"
     AI Tutor: "print("Your text here")"
     `,
 
-      'explanation': `Start with the token "DIRECT EXPLANATION".
+      'explanation': `
     ${basePrompt} When answering questions, first clearly state the answer, then provide a brief, easy-to-follow explanation of the underlying concept or logic. Limit the explanation to 1 minute read, if the explanation is too long, ask the student if they want to continue.
     Example Interaction:
     Student Question: "What is a variable in programming?"
@@ -265,7 +265,7 @@ class GeminiService extends LLMServiceInterface {
       const responseText = result.response.text();
       const evaluation = this.extractEvaluation(responseText);
 
-      return { responseText, evaluation };
+      return { responseText: responseText.replace(/@Evaluation: (PASS|FAIL)/g, ''), evaluation };
     } catch (error) {
       console.error('Error generating LLM response:', error);
       throw error;
@@ -319,7 +319,7 @@ class OpenAIService extends LLMServiceInterface {
     const basePrompt = `You are a tutor specializing in introductory computer science, helping computer science freshman with their programming learning.`;
 
     const prompts = {
-      'sensemaking': `Start your reply with the token "SENSEMAKING".
+      'sensemaking': `
       ${basePrompt}
 
       Task:
@@ -347,7 +347,7 @@ class OpenAIService extends LLMServiceInterface {
       - Vary your question phrasing on each FAIL so it never feels like a copy-paste.
     `,
 
-      'representation': `Start your reply with the token "REPRESENTATION".
+      'representation': `
       ${basePrompt}
 
       Task:
@@ -377,7 +377,7 @@ class OpenAIService extends LLMServiceInterface {
         - Output \`@Evaluation: PASS\` and stop; await next instruction.
     `,
 
-      'planning': `Start your reply with the token "PLANNING".
+      'planning': `
       ${basePrompt}
 
       Task:
@@ -416,7 +416,7 @@ class OpenAIService extends LLMServiceInterface {
         - Output exactly \`@Evaluation: PASS\` and stop; await the next instruction.
     `,
 
-      'execution': `Start your reply with the token "EXECUTION".
+      'execution': `
       ${basePrompt}
 
       Task:
@@ -440,7 +440,7 @@ class OpenAIService extends LLMServiceInterface {
         - Output \`@Evaluation: PASS\` and stop; await next instruction.
     `,
 
-      'monitoring': `Start your reply with the token "MONITORING".
+      'monitoring': `
       ${basePrompt}
 
       Task:
@@ -467,7 +467,7 @@ class OpenAIService extends LLMServiceInterface {
         - Output \`@Evaluation: PASS\` and stop; await next instruction.
     `,
 
-      'reflection': `Start your reply with the token "REFLECTION".
+      'reflection': `
       ${basePrompt}
 
       Task:
@@ -499,14 +499,14 @@ class OpenAIService extends LLMServiceInterface {
         - Output \`@Evaluation: PASS\` and stop; await next instruction.
     `,
 
-      'direct': `Start with the token "DIRECT ANSWER".
+      'direct': `
       ${basePrompt} Your goal is to provide clear, direct answers without additional context or explanation unless specifically asked.
       Example Interaction:
       Student Question: "How do I print text in Python?"
       AI Tutor: "print("Your text here")"
     `,
 
-      'explanation': `Start with the token "DIRECT EXPLANATION".
+      'explanation': `
       ${basePrompt} When answering questions, first clearly state the answer, then provide a brief, easy-to-follow explanation of the underlying concept or logic. Limit the explanation to 1 minute read, if the explanation is too long, ask the student if they want to continue.
       Example Interaction:
       Student Question: "What is a variable in programming?"
@@ -551,7 +551,7 @@ class OpenAIService extends LLMServiceInterface {
       const responseText = result.choices[0].message.content;
       const evaluation = this.extractEvaluation(responseText);
 
-      return { responseText, evaluation };
+      return { responseText: responseText.replace(/@Evaluation: (PASS|FAIL)/g, ''), evaluation };
     } catch (error) {
       console.error('Error generating OpenAI response:', error);
       throw error;
