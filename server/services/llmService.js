@@ -323,7 +323,7 @@ class OpenAIService extends LLMServiceInterface {
       ${basePrompt}
 
       Task:
-      - Begin by asking the student a warm, open-ended question that helps them *restate the problem in their own words*. You are not testing them—you're checking their *understanding*.
+      - Begin by asking the student *one* warm, open-ended question that helps them *restate the problem in their own words*. You are not testing them—you're checking their *understanding*.
       - After they reply, check if they:
         1. Accurately restated the main goal (e.g., what is the code meant to *produce or accomplish*?)
       
@@ -374,7 +374,8 @@ class OpenAIService extends LLMServiceInterface {
 
       Task:
       - Ask the student to choose a specific strategy (or function plan).
-      - Then, have them implement their strategy and guide them to walk step-by-step through how that strategy would work on a sample input—showing how input turns into output.
+      - Then, have them implement their strategy. 
+      - Once they provide an implementation, ask them to walk you their implementation for a small example input. 
       
       Rules:
       - This is about reasoning, not just code. If they skip steps or jump to conclusions, help them slow down and think.
@@ -389,7 +390,7 @@ class OpenAIService extends LLMServiceInterface {
       Task:
       - Ask the student to:
         1. Compare their expected output to what the program actually produced.
-        2. Pinpoint where they diverged.
+        2. Pinpoint where they diverged, if they failed their tests.
         3. Hypothesize *why* the difference occurred.
       
       Rules:
@@ -411,6 +412,7 @@ class OpenAIService extends LLMServiceInterface {
       Rules:
       - Encourage thoughtful reflection, not surface-level answers.
       - First response MUST end with \`@Evaluation: FAIL\` to create space for deeper thought.
+     - Students aren't allowed to skip the reflection.
       
       - **IMPORTANT: Always end your message with exactly one line: \`@Evaluation: PASS\` or \`@Evaluation: FAIL\`. No other text after this.**
       `,
