@@ -10,8 +10,8 @@ const ChatPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const isReplayMode = location.pathname.includes('/replay/');
-  
-  const defaultGreeting = { role: 'system', content: 'Hi there! I\'m your AI tutor—I\'m here to help you learn computer science today, so feel free to ask questions or jump right into a problem when you\'re ready!' };
+
+  const defaultGreeting = { role: 'system', content: 'Hi there! I\'m your AI tutor—I\'m here to help you learn computer science today, feel free to jump right into a problem when you\'re ready!' };
 
   const [messages, setMessages] = useState(paramConversationId? [] : [defaultGreeting]);
   const [conversation, setConversation] = useState(null);
@@ -24,7 +24,7 @@ const ChatPage = () => {
   const [error, setError] = useState(null);
   const { currentUser } = useAuth();
   const dropdownRef = useRef(null);
-  
+
   // Initialize LLM service when user changes
   useEffect(() => {
     if (currentUser && !isReplayMode) {
@@ -33,19 +33,19 @@ const ChatPage = () => {
       localStorage.setItem('lastUsedLLMService', currentUser.defaultService);
     }
   }, [currentUser, isReplayMode]);
-  
+
   // Update conversationId when URL param changes
   useEffect(() => {
     setConversationId(paramConversationId || null);
   }, [paramConversationId]);
-  
+
   // Persist the conversationId when it changes for non-replay mode
   useEffect(() => {
     if (!isReplayMode && conversationId) {
       localStorage.setItem('lastConversationId', conversationId);
     }
   }, [conversationId, isReplayMode]);
-  
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -53,31 +53,31 @@ const ChatPage = () => {
         setIsLLMDropdownOpen(false);
       }
     };
-    
+
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [dropdownRef]);
-  
+
   // Load conversation - either from replay or last conversation
   useEffect(() => {
     const loadConversation = async () => {
       try {
         setLoading(true);
         const response = await api.getConversation(conversationId);
-        
+
         setConversation(response.data);
         setMessages(response.data.messages || [defaultGreeting]);
         setTitle(response.data.title || 'Conversation');
-        
+
         // Handle backward compatibility with old tutor mode format
         if (response.data.metadata?.tutorMode) {
           setLLMService(`gemini-${response.data.metadata.tutorMode}`);
         } else if (response.data.metadata?.llmService) {
           setLLMService(response.data.metadata.llmService);
         }
-        
+
         setError(null);
       } catch (err) {
         console.error('Error fetching conversation:', err);
@@ -86,7 +86,7 @@ const ChatPage = () => {
         setLoading(false);
       }
     };
-    
+
     if (isReplayMode && conversationId) {
       loadConversation();
     } else if (!isReplayMode && !conversationId) {
@@ -118,15 +118,15 @@ const ChatPage = () => {
       }
     }
   }, [conversationId, isReplayMode, currentUser]);
-  
+
   const resetView = () => {
     setEditingMessageIndex(null);
   };
-  
+
   const handleEditMessage = (index) => {
     setEditingMessageIndex(index);
   };
-  
+
   const handleCancelEdit = () => {
     setEditingMessageIndex(null);
   };
@@ -134,18 +134,18 @@ const ChatPage = () => {
   const handleLLMServiceChange = async (service) => {
     setLLMService(service);
     setIsLLMDropdownOpen(false);
-    
+
     if (!isReplayMode) {
       localStorage.setItem('lastUsedLLMService', service);
     }
-    
+
     // Update the LLM service in the database if we have a conversation
     if (conversationId) {
       try {
-        await api.updateConversation(conversationId, { 
-          metadata: { llmService: service } 
+        await api.updateConversation(conversationId, {
+          metadata: { llmService: service }
         });
-        
+
         // Update local state to reflect the change
         if (conversation) {
           setConversation({
@@ -161,45 +161,45 @@ const ChatPage = () => {
       }
     }
   };
-  
+
   const handleSendMessage = async (message) => {
     if (!message.trim()) return;
-    
+
     // If in replay mode and editing a message
     if (isReplayMode && editingMessageIndex !== null) {
       try {
         setLoading(true);
-        
+
         // Step 1: Fork the conversation at this message index without modifying the original
         console.log('Forking conversation:', conversationId, 'at index:', editingMessageIndex);
         const response = await api.forkConversation(conversationId, editingMessageIndex);
-        
+
         // Step 2: Get the new conversation ID
         const forkedConversationId = response.data._id;
         console.log('Created forked conversation with ID:', forkedConversationId);
-        
+
         // Step 3: Get the forked conversation to confirm its structure
         const forkedConversation = await api.getConversation(forkedConversationId);
         console.log('Retrieved forked conversation:', forkedConversation.data);
-        
+
         // Step 4: Update the last message instead of adding a new one
         const lastMessageIndex = forkedConversation.data.messages.length - 1;
         console.log('Updating message at index:', lastMessageIndex);
         await api.updateMessage(forkedConversationId, lastMessageIndex, message);
-        
+
         // Step 5: Update the LLM service in the new conversation
         console.log('Updating LLM service to:', llmService);
         await api.updateConversation(forkedConversationId, {
           metadata: { llmService: llmService }
         });
-        
+
         // Step 6: Generate AI response in the new conversation
         console.log('Generating AI response with service:', llmService);
         await api.continueConversation({
           conversationId: forkedConversationId,
           serviceId: llmService
         });
-        
+
         // Step 7: Navigate to the new forked conversation
         console.log('Navigating to forked conversation');
         navigate(`/replay/${forkedConversationId}`);
@@ -211,19 +211,19 @@ const ChatPage = () => {
         return;
       }
     }
-    
+
     // If in chat mode and editing a message
     else if (!isReplayMode && editingMessageIndex !== null) {
       try {
         setLoading(true);
-        
+
         const response = await api.editMessage({
           conversationId: conversationId,
           messageIndex: editingMessageIndex,
           newContent: message,
           serviceId: llmService
         });
-        
+
         // Update the conversation
         setMessages(response.data.conversation.messages);
         setEditingMessageIndex(null);
@@ -235,12 +235,12 @@ const ChatPage = () => {
       }
       return;
     }
-    
+
     // Regular message send (for both modes)
     // Add user message to the UI immediately
     setMessages(prev => [...prev, { role: 'student', content: message }]);
     setLoading(true);
-    
+
     try {
       // Send the message directly, letting the LLM/chat endpoint handle conversation creation
       const response = await api.sendMessage({
@@ -248,7 +248,7 @@ const ChatPage = () => {
         message,
         serviceId: llmService
       });
-      
+
       // Update with the conversation from the server
       if (isReplayMode) {
         setMessages(response.data.conversation.messages);
@@ -279,18 +279,18 @@ const ChatPage = () => {
     }
 
     const label = lookupTable[serviceId] || serviceId;
-    
+
     return {
       id: serviceId,
       label
     };
   }) || []);
-  
+
   // Find the current service label
-  const currentService = llmService ? 
+  const currentService = llmService ?
     llmServices.find(service => service.id === llmService) || { label: 'LLM Service' } :
     { label: 'Select Service' };
-  
+
     console.log("currentService", currentService);
     console.log("currentService", currentService.label);
 
@@ -305,7 +305,7 @@ const ChatPage = () => {
       </div>
     );
   }
-  
+
   return (
     <div className={isReplayMode ? "replay-page" : "chat-page"}>
 
@@ -317,9 +317,9 @@ const ChatPage = () => {
         </div>
       )}
 
-      
+
       <div className={isReplayMode ? "replay-container" : "chat-container"}>
-        
+
           <ChatInterface
             messages={messages}
             isReadOnly={false}
@@ -334,4 +334,4 @@ const ChatPage = () => {
   );
 };
 
-export default ChatPage; 
+export default ChatPage;

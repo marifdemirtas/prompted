@@ -68,37 +68,10 @@ const Sidebar = () => {
         <div className="logo">
           <span>PromptEd</span>
         </div>
-        <button className="new-chat-btn" onClick={handleNewChat}>
-          <span>+ New chat</span>
-        </button>
       </div>
 
       <div className="conversations-list">
-        {loading ? (
-          <div className="loading-spinner">Loading...</div>
-        ) : (
-          <div className="conversation-items">
-            {conversations.map(conversation => (
-              <div
-                key={conversation._id}
-                className="conversation-item"
-                onClick={() => handleSelectConversation(conversation._id)}
-              >
-                <span className="conversation-title">{conversation.title}</span>
-                <button 
-                  className="delete-conversation-btn"
-                  onClick={(e) => handleDeleteConversation(e, conversation._id)}
-                  title="Delete conversation"
-                >
-                  <span>×</span>
-                </button>
-              </div>
-            ))}
-            {conversations.length === 0 && (
-              <div className="no-conversations">No conversations yet</div>
-            )}
-          </div>
-        )}
+        <div className="no-conversations"></div>
       </div>
 
       <div className="sidebar-footer">
@@ -117,4 +90,4 @@ const Sidebar = () => {
   );
 };
 
-export default Sidebar; 
+export default Sidebar;
